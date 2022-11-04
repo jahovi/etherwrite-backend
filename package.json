@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon src/app.ts",
     "build": "./node_modules/.bin/tsc",
+    "build2":"tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -22,6 +23,7 @@
     "typescript": "^4.8.4"
   },
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "nano": "^10.1.0"
   }
 }
