@@ -1,5 +1,5 @@
-import { Application, Request, Response } from "express";
-import Router from "./core/router.interface";
+import {Application, Request, Response} from "express";
+import Router from "./core/router/router.interface";
 
 export default class TestRouter implements Router {
 
