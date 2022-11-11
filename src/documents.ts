@@ -1,0 +1,1 @@
+export * from "./core/couch/documents/0-example";
