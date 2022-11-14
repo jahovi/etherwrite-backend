@@ -58,4 +58,42 @@ otherwise contains number in the range of 0 to (blockLength-1) in ascending orde
 
 The order in which the elements in this list are placed is identical to the order of corresponding blocks in the etherpad text.  
 
+## Endpoints
+
+### /authoring_ratios
+
+Returns as json an object containing author, authoring ratio and color information for a pad. Without arguments, data for all pads is returned. Example: 
+
+```js
+{
+  nameOfFirstPad: { 
+    authors: [nameAuthor1, nameAuthor2, ...],
+    ratios: [anteilAutor1, anteilAutor2, ...],
+    colors: [farbeAutor1, farbeAutor2, ...]
+  }
+  nameOfSecondPad: {
+    authors: [nameAuthor1, nameAuthor2, ...],
+    ratios: [ratioAutor1, ratioAutor2, ...],
+    colors: [colorAutor1, colorAutor2, ...]
+  }
+  ...
+}
+```
+
+With an argument of `pad=PADNAME`, only data for the specified pad will be returned. Example:
+
+```js
+{
+	authors: [nameAuthor1, nameAuthor2, ...],
+    ratios: [anteilAutor1, anteilAutor2, ...],
+    colors: [farbeAutor1, farbeAutor2, ...]
+}
+```
+
+The funcionality is implemented in the following files: 
+
+- src/authoring-ratios.router.ts
+- src/authoring-ratios-service/authoring-ratios-calculator.ts
+- src/core/couch/documents/authoring-ratios-view.ts
+
 
