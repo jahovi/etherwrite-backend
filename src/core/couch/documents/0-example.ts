@@ -1,4 +1,4 @@
-import {DesignDocumentService} from "../design-document.service";
+import { DesignDocumentService } from "../design-document.service";
 
 declare const emit: any;
 
@@ -7,14 +7,14 @@ declare const emit: any;
  * The {@code declare const emit} up there is mandatory, since typescript wouldn't shut up
  * about the "emit" function which CouchDB uses.
  */
+
 DesignDocumentService.register({
 	_id: "_design/example",
 	views: {
 		changesets: {
 			map: function (doc) {
-				if (doc.value.meta.author) {
-					const index = doc._id.indexOf(":revs:");
-					emit([doc._id.substring(0, index), doc.value.meta.author], doc.value.changeset, doc.value.timestamp);
+				if (doc._id.includes(":revs:")) {
+					emit(doc._id.toString(), { author: doc.value.meta.author });
 				}
 			},
 			reduce: "_count",
