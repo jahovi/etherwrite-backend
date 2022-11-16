@@ -7,11 +7,16 @@ import routerService from "./core/router/router.service";
 import PadRegistry from "./pads";
 import AuthorRegistry from "./author-registry";
 
+
 dotenv.config();
 
 const app: Application = express();
 
 const port = process.env.PORT || 8083;
+
+const cors = require("cors");
+
+app.use(cors());
 
 routerService.init(app);
 
