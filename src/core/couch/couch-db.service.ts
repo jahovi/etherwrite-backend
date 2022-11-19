@@ -1,4 +1,4 @@
-import nano, {DocumentScope, ViewDocument} from "nano";
+import nano, {DocumentScope, DocumentViewResponse} from "nano";
 import logService from "../log/log.service";
 import {MaybeRevisionedViewDocument} from "./maybe-revisioned-view-document.type";
 
@@ -28,11 +28,11 @@ export class CouchDbService {
 	 * @param docId The id of the wanted document.
 	 * @return a promise of a document if there is one, _undefined_ otherwise.
 	 */
-	public async getIfExists<D>(db: DocumentScope<D>, docId: string): Promise<MaybeRevisionedViewDocument<any> | undefined> {
+	public async getIfExists<D>(db: DocumentScope<any>, docId: string): Promise<D | undefined> {
 		try {
 			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 			// @ts-ignore – we only work with view documents here, so we can assume that this is one.
-			return await db.get(docId) as ViewDocument<any>;
+			return await db.get(docId);
 		} catch (e) {
 			return undefined;
 		}
@@ -68,6 +68,24 @@ export class CouchDbService {
 		} catch (e: any) {
 			logService.exception(CouchDbService.name, "Cannot delete document: " + e.message, e);
 		}
+	}
+
+	/**
+	 * Retrieves the result of the given view in the given design document.
+	 * @param db The database connection to work with.
+	 * @param document The document to request.
+	 * @param view The view inside the document to request.
+	 */
+	public async readView(db: DocumentScope<any>, document: string, view: string): Promise<DocumentViewResponse<any, any>> {
+		return new Promise((resolve, reject) => {
+			db.view(document, view, async (err, body) => {
+				if (err) {
+					reject(err);
+				} else {
+					resolve(body);
+				}
+			});
+		});
 	}
 }
 

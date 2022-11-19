@@ -14,14 +14,16 @@ const app: Application = express();
 const port = process.env.PORT || 8083;
 
 routerService.init(app);
-AuthorRegistry.init();
 
-designDocumentService.registerAllDocuments().then(() => {
-	app.listen(port, () => {
+// Update or create necessary documents.
+designDocumentService.registerAllDocuments()
+	// Initialise the author registry to get all global authors.
+	.then(() => AuthorRegistry.init())
+	// prepare ChangesetProcessors for all known pads.
+	.then(() => PadRegistry.initAndUpdate())
+	// initialise the server.
+	.then(() => app.listen(port, () => {
 		logService.info("EVA", `Listening on port ${port}!`);
-	});
-});
+	}));
 
-// prepare ChangesetProcessors for all known pads
-setTimeout(()=> PadRegistry.initAndUpdate(), 100 ) ;
 

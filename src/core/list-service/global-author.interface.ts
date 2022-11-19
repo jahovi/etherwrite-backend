@@ -1,13 +1,13 @@
 /**
- * Mirrors the structure of the objects in the 
- * database that contain central author information. 
+ * Mirrors the structure of the objects in the
+ * database that contain central author information.
  */
-export default interface AuthorData{
-    _id: string;
-    _rev: string;
-    value: {
-        colorId:string,
+import {IdentifiedDocument, RevisionedDocument} from "nano";
+
+export default interface AuthorData extends IdentifiedDocument, RevisionedDocument {
+	value: {
+		colorId: string,
 		name: string,
-		timestamp:number;
-    }
+		timestamp: number;
+	}
 }
