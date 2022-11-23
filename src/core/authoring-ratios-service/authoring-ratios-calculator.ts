@@ -6,7 +6,7 @@ import LogService from "../log/log.service";
 /**
  * Class to retrieve data about number of characters by each author and total characters in each pad from the db,
  * calculate ratios from these numbers and pack the data in a convenient format to be processed and visualized
- * in the frontend. 
+ * in the frontend.
  */
 export default class AuthoringRatiosCalculator {
 	private dbConnection;
@@ -44,7 +44,7 @@ export default class AuthoringRatiosCalculator {
 			if (totalCharsInPad !== 0) { // else all ratios will be 0
 				authoringRatio = authoredChars / totalCharsInPad;
 			}
-			result.push(new TupleFormat(pad, authorId, author.mapper2author || "", authoringRatio, author.color));
+			result.push(new TupleFormat(pad, author.epalias || "(kein Name)", author.mapper2author || "", authoringRatio, author.color));
 		}
 		// Repack into final format and return
 		return this.tupleToPadGroupedFormat(result);
