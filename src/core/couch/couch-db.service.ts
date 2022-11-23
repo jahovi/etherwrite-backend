@@ -1,4 +1,4 @@
-import nano, {DocumentScope, DocumentViewResponse} from "nano";
+import nano, {DocumentScope, DocumentViewParams, DocumentViewResponse} from "nano";
 import logService from "../log/log.service";
 import {MaybeRevisionedViewDocument} from "./maybe-revisioned-view-document.type";
 
@@ -76,9 +76,9 @@ export class CouchDbService {
 	 * @param document The document to request.
 	 * @param view The view inside the document to request.
 	 */
-	public async readView(db: DocumentScope<any>, document: string, view: string): Promise<DocumentViewResponse<any, any>> {
+	public async readView(db: DocumentScope<any>, document: string, view: string, params: DocumentViewParams = {}): Promise<DocumentViewResponse<any, any>> {
 		return new Promise((resolve, reject) => {
-			db.view(document, view, async (err, body) => {
+			db.view(document, view, params, async (err, body) => {
 				if (err) {
 					reject(err);
 				} else {
