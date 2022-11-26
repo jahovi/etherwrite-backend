@@ -20,6 +20,7 @@ export default class AuthoringRatiosCalculator {
 	 * Queries the views defined in authoring-ratios-view.ts to calculate authoring ratios per author and pad,
 	 * and packs the data in a convenient format. An authoring ratio is defined as the number of characters written
 	 * by the user that currently exist in the pad, divided by the total number of characters currently existing in the pad.
+	 * The number is convertet to a percentage and rounded to two decimals.
 	 * @returns Authors and corresponding moodle IDS, ratios and colors grouped by pad
 	 */
 	public async calculateAuthoringRatios() {
@@ -43,7 +44,7 @@ export default class AuthoringRatiosCalculator {
 			}
 			let authoringRatio = 0;
 			if (totalCharsInPad !== 0) { // else all ratios will be 0
-				authoringRatio = authoredChars / totalCharsInPad;
+				authoringRatio = Number((authoredChars / totalCharsInPad * 100).toFixed(2)); // convert ratio to percentage with two decimals
 			}
 			result.push(new TupleFormat(pad, author.epalias || "(kein Name)", author.mapper2author || "", authoringRatio, author.color));
 		}

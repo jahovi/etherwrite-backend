@@ -75,8 +75,9 @@ The order in which the elements in this list are placed is identical to the orde
 
 ### /authoring_ratios
 
-Returns as json an object containing author, authoring ratio and color information for a pad. Without arguments data for all pads is
-returned. If the current user is not a moderator calls without a pad argument will be denied.
+Returns as json an object containing corresponding authors, moodle IDs, authoring ratios and colors for each pad. The ratios are given 
+as percentages rounded to two decimal places. Without arguments data for all pads is returned. 
+If the current user is not a moderator calls without a pad argument will be denied.
 
 Example:
 
