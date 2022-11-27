@@ -18,7 +18,15 @@ COUCH_DB_USER=somename
 COUCH_DB_PWD=password
 COUCH_DB_HOST=localhost
 COUCH_DB_PORT=5984
+
+CSP_UPDATE_DELAY=5000
+
+TRS_UPDATE_DELAY=5000
+
+PADREG_UPDATE_DELAY=5000
+PADS_IGNORE = 
 ```
+PADS_IGNORE can be filled with one or more names of pads, separated by commas. These will be ignored by EVA  
 
 ## Structure
 
@@ -35,7 +43,7 @@ Execute request `GET localhost:8083/dbtest?dbname=<your db name>` to test databa
 
 ### /getAuthorInfo
 
-Execute request `GET localhost:8083/getAuthorInfo` to receive an object containing author information:
+Execute request `GET localhost:8083/getAuthorInfo` to receive an object containing information about all authors EVA currently knows. Be sure to request this regularly to be informed about eventual color changes by the authors. 
 
 ```js
 {
@@ -55,23 +63,26 @@ is such a file in the couchdb for this etherpad id.
 
 ### /getBlockInfo
 
-Execute request `GET localhost:8083/getBlockInfo?padName=<your pad name>` to receive a sequence of data representing the blocks of text that
-originate from author each. Each object of the sequence has this form:
+Execute request `GET localhost:8083/getBlockInfo?padName=<your pad name>` to receive a sequence of data representing the blocks of text. The beginning of a new block indicates that the author and/or the ignoreColor-flag has changed compared to the previous block. Each object of the sequence has this form:
 
 ````js
 {
   author: string, 
   blockLength: number,
-  lineBreakIndices ? : number[]
+  lineBreakIndices ?: number[],
+  ignoreColor?:boolean,
+  headingStartIndices?:number[],
+  headingTypes?:{[key:number]:string},
 }
 ````
 
-author -- the etherpad id of the author auf this text block   
+author -- the etherpad id of the author of this text block   
 blockLength -- the number of characters in this text block (linebreaks count as characters too)  
-lineBreakIndices: -- enumerates (if there are any ...) this relative indices in this block, where there is a linebreak. May be empty or
-otherwise contains number in the range of 0 to (blockLength-1) in ascending order.
-
-The order in which the elements in this list are placed is identical to the order of corresponding blocks in the etherpad text.
+lineBreakIndices -- enumerates the relative indices in this block, where a linebreak is located. May be empty or
+otherwise contains number in the range of 0 to (blockLength-1) in ascending order. The order in which the elements in this list are placed is identical to the order of the corresponding text structure in the etherpad text.  
+ignoreColor -- if true, this indicates that all the text in this block has been set to remove the author colors in the etherpad editor.   
+headingStartIndices -- may contain zero or more relative indices in ascending order. Each of these indices means, that all following  characters are to be printed as headline. Every headline ends at the next following linebreak. Be aware that this linebreak may occur in one of the later blocks. IMPORTANT: Each heading start index is associated with a *-character that is invisible in the editor and accordingly should NOT be represented by a character in the minimap.  
+headingTypes -- For each index in headingStartIndices this contains the information about its size ("h1","h2","h3","h4"). The startIndex serves as key to the corresponding heading type in this object.  
 
 ### /authoring_ratios
 
@@ -127,4 +138,21 @@ The functionality is implemented in the following files:
 - src/authoring-ratios-service/authoring-ratios-calculator.ts
 - src/core/couch/documents/authoring-ratios-view.ts
 
+### /getScrollPos
 
+Execute request `GET localhost:8083/getBlockInfo?padName=<your pad name>` to receive information gathered 
+by the ep-tracking module about the latest scroll positions of users. Will only contain data regarding 
+authors that can be assumed to currently have openend that pad. I.e. users, for which ep-tracking has a 
+disconnect event that is newer than the latest connect event or the latest scroll event, will be excluded.  
+The data is structured as follows:  
+
+```js
+{
+	[key: string]:
+	{
+		timeStamp: number,
+		topIndex: number,
+		bottomIndex?: number,
+	}
+}
+```

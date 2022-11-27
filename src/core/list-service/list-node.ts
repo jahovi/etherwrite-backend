@@ -11,7 +11,7 @@ export default class ListNode {
 	public value: ListContent;
 
 	public constructor(content: string, author: string) {
-		this.value = {content: content, meta:{author:author}}
+		this.value = {content: content, meta:{author:author, ignoreColor:false}}
 	}
 
 }

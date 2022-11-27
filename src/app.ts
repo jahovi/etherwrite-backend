@@ -6,6 +6,7 @@ import logService from "./core/log/log.service";
 import routerService from "./core/router/router.service";
 import PadRegistry from "./pads";
 import AuthorRegistry from "./author-registry";
+import TrackingService from "./core/tracking-service/tracking-service";
 
 
 dotenv.config();
@@ -14,6 +15,7 @@ const app: Application = express();
 
 const port = process.env.PORT || 8083;
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const cors = require("cors");
 
 app.use(cors());
@@ -26,9 +28,14 @@ designDocumentService.registerAllDocuments()
 	.then(() => AuthorRegistry.init())
 	// prepare ChangesetProcessors for all known pads.
 	.then(() => PadRegistry.initAndUpdate())
+	// start TrackingService
+	.then(()=> TrackingService.initAndUpdate())
 	// initialise the server.
 	.then(() => app.listen(port, () => {
 		logService.info("EVA", `Listening on port ${port}!`);
 	}));
+
+
+
 
 

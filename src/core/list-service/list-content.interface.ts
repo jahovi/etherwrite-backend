@@ -7,6 +7,8 @@
 export default interface ListContent {
     content:string;
     meta:{
-        author:string;
+        author:string,
+        ignoreColor:boolean,
+        headingStart?:string,
     }
 }

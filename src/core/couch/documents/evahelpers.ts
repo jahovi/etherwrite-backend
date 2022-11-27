@@ -36,6 +36,13 @@ DesignDocumentService.register({
 					emit(doc.value, doc._id.substring(13, doc._id.length));
 				}
 			}
-		}
+		},
+		fetchtrackingdata: {
+			map: function (doc) {
+				if (doc._id.substring(0, 9) == "tracking:") {
+					emit(doc._id, doc.value);
+				}
+			}
+		},
 	},
 });

@@ -5,8 +5,9 @@ import DLList from "./double-linked-list";
 import PadInfo from "./padinfo.interface";
 import PadRev from "./pad-rev.interface";
 import AuthorRegistry from "../../author-registry";
-import {MiniMapDataUnit} from "./mini-map-data-unit.type";
+import { MiniMapDataUnit } from "./mini-map-data-unit.type";
 import LogService from "../log/log.service";
+import logService from "../log/log.service";
 
 
 /**
@@ -21,7 +22,8 @@ import LogService from "../log/log.service";
  *This linked list provides the opportunity to efficiently generate
  *data structures in a shape that fits the needs of the frontend use
  *cases, such as the minimap and other dashboard charts, that require
- *information especially regarding the quantity of author contributions.
+ *information especially regarding the quantity of author contributions. 
+ *Instances of this class are created by the PadRegistry-class. 
  */
 export default class ChangesetProcessor {
 
@@ -36,16 +38,29 @@ export default class ChangesetProcessor {
 	private listRevStatus = -1; // the number of the newest rev, that has been processed in the list
 	private blocks: MiniMapDataUnit[] = []; /* the most recent version of a block list. */
 
-	private blocksUpdateTimeStamp = 0; // the timestamp of aforementioned block list
-
 	private docScope = CouchDbService.getConnection("etherpad");
 	private padHead?: number; // indicates the newest pad:[name]:revs:[padHead]
 	public readonly padName: string; // the name of the etherpad, that this instance provides services for
 	private padInfo?: PadInfo; // contains the most recent version of basic information regarding that etherpad
 	private initCompleted = false; // internal flag
 	private revData: { [key: number]: { cset: Changeset.Changeset, author: string, timestamp: number } } = {};
-
 	// contains all known changsets, that could possibly be retrieved from the database
+
+	public authorKeys: string[] = []; // the keys of authors in the numToAttrib of the pad
+	private blankKey = ""; /* contains the attribute key if an anonymous author is used by etherpad
+								 to designate a char as colorless  */
+	public authorUNDOAnomalyCounter: { [key: string]: number } = {}; /* counter for _possible_ abuse cases per author
+																		NOTE: It cannot be determined here whether an 
+																		author has actually gained an advantage at the
+																		expense of other users. It´s just as possible that
+																		the number of characters counted here where already
+																		previously his own*/
+
+	public lastActivityTimeStamp:{[key:string]:number} = {};
+
+	private attrToHeadingMapping: { [key: string]: string } = {};
+
+
 
 
 	/**
@@ -66,7 +81,7 @@ export default class ChangesetProcessor {
 	 * amount of time has passed since the current block list has
 	 * been created.
 	 *
-	 * Clients are encouraged to continously call this method
+	 * Clients are encouraged to continously call for a new list
 	 * every 3 to 5 seconds.
 	 */
 	public getAuthorBlockList(): MiniMapDataUnit[] {
@@ -81,7 +96,7 @@ export default class ChangesetProcessor {
 	 * of the linked list.
 	 */
 	private async prepareUpdate() {
-		this.blocksUpdateTimeStamp = Date.now();
+
 		// has head attribute in database changed?
 		await this.checkNewInfoInDataBase();
 
@@ -110,7 +125,26 @@ export default class ChangesetProcessor {
 		for (let i = 0; i < this.padInfo.value.pool.nextNum; i++) {
 			const entry = this.padInfo.value.pool.numToAttrib[String(i)];
 			if (entry[0] == "author") {
-				AuthorRegistry.put(entry[1]);
+				if (entry[1] != "") {
+					if (!this.authorKeys.includes(String(i))) {
+						this.authorKeys.push(String(i));
+					}
+					AuthorRegistry.put(entry[1]);
+					if (!this.authorUNDOAnomalyCounter[entry[1]]) {
+						this.authorUNDOAnomalyCounter[entry[1]] = 0;
+					}
+					if(!this.lastActivityTimeStamp[entry[1]]){
+						this.lastActivityTimeStamp[entry[1]] = 0;
+					}
+				}
+				else {
+					this.blankKey = String(i);
+				}
+			}
+			if (entry[0] == "heading") {
+				if (!this.attrToHeadingMapping[String(i)]) {
+					this.attrToHeadingMapping[String(i)] = entry[1];
+				}
 			}
 		}
 	}
@@ -142,10 +176,9 @@ export default class ChangesetProcessor {
 		let nextRev = this.listRevStatus + 1;
 		while (this.revData[nextRev]) {
 			this.list.setToHead();
-
 			// we are going through all new revs that we previously pulled from the database
 			const currentRevData = this.revData[nextRev];
-
+			this.lastActivityTimeStamp[currentRevData.author] = currentRevData.timestamp;
 			// bring the data in a more comfortable shape.
 			// ops may contain zero or more operations
 			const ops = Changeset.deserializeOps(currentRevData.cset.ops);
@@ -166,28 +199,66 @@ export default class ChangesetProcessor {
 				switch (currentOp.opcode) {
 
 				// we need to insert one or more characters
-				case "+":
-					// only one character per list node
-					// so we may have to split the string data
-					while (newChars.length > 0) {
+				case "+": {
+					let applyIgnoreColor = false;
+					let author: string; // the etherpad id 
+					try {
+						// trying to find author in attribs
+						const authorKey = this.extractAuthorKeyFromAttribs(currentOp.attribs);
+						author = this.getFromNumToAttrib(authorKey, 1);
+						if (author == "") throw new Error();
+					}
+					catch {
+						// else use author data from revdata
+						author = currentRevData.author;
+
+						/* 	We assume that this happened because of an
+									UNDO after the deletion of a section, that contained
+									characters where the etherpad-lite button "Autorenfarben zurücksetzen"
+									was used
+								*/
+						this.authorUNDOAnomalyCounter[author] += currentOp.chars;
+						applyIgnoreColor = true;
+					}
+
+					// is equal to "" unless a heading start symbol is set. 
+					// otherwise will contain the size, i.e "h1", "h2", "h3" or "h4"
+					const headingType = this.extractHeadingKeyFromAttribs(currentOp.attribs);
+
+					for (let i = 0; i < currentOp.chars; i++) {
 						const char = newChars[0];
-						const author = currentRevData.author ? currentRevData.author : "--no author info provided--"
-						this.list.insertAfterCurrentAndMoveCurrent(char, author);
+						this.list.insertAfterCurrentAndMoveCurrent(char, author, applyIgnoreColor, headingType);
 						newChars = newChars.substring(1, newChars.length);
 					}
 					break;
-
-					// this op instructs us to move to a certain position
+				}
+				// this op instructs us to move to a certain position
 				case "=":
-					// the number of steps we are ordered to move
-					// is stored in the .chars attribute
-					this.list.moveFwd(currentOp.chars);
+
+					if (currentOp.attribs) {
+						const attrList = this.attribsToList(currentOp.attribs);
+						const ignoreColors = this.blankKey != "" && attrList.includes(this.blankKey);
+						const headingType = this.extractHeadingKeyFromAttribs(currentOp.attribs);
+						// if (this.blankKey && attrList.includes(this.blankKey)) {
+						// the 'blank author' is used by etherpad-lite to
+						// indicate that the "Autorenfarben zurücksetzen"
+						// function was applied
+						// this.list.setIgnoreColor(currentOp.chars);
+						// ignoreColors=true;
+						// }
+						for (let i = 0; i < currentOp.chars; i++) {
+							this.list.changeAttributesOfNextChar(ignoreColors, headingType);
+						}
+
+
+					} else {
+						// normal movement
+						this.list.moveFwd(currentOp.chars);
+					}
 					break;
 
 					// we have to remove a number of chars
-				case "-":
-
-					// eslint-disable-next-line no-case-declarations
+				case "-": {
 					const rawRevData = currentRevData.cset as unknown as CSRaw;
 					if (rawRevData.newLen == 1) {
 						this.list.eraseAllNodes();
@@ -196,6 +267,7 @@ export default class ChangesetProcessor {
 							this.list.removeAfterCurrent();
 						}
 					}
+				}
 					break;
 				}
 				// let´s look at the next op in this set
@@ -219,57 +291,86 @@ export default class ChangesetProcessor {
 	private getBlocks(): MiniMapDataUnit[] {
 
 		if (!this.list.head.next || this.list.head.next == this.list.tail) {
-			// can normally never happen
-			// but typescript wants this checked
 			return [];
 		}
 		let currentAuthor = this.list.head.next.value.meta.author;
+		let blockIgnoreColors = this.list.head.next.value.meta.ignoreColor;
 
 		const outList: MiniMapDataUnit[] = [];
 		let counter = 0; // the amount of characters in the current block
 		let lineBreaks: number[] = []; // the relative indices of eventually found linebreaks
+		let headingStart: number[] = [];
+		let headingTypes: { [key: number]: string } = {};
 		let runner = this.list.head.next; // pointer, that points to the
-		while (runner.next && runner != this.list.tail) {
-			// stops at the last node before tail
+		while (runner.next) {
+			// stops after the last node before tail
 
-			if (runner.value.meta.author == currentAuthor) {
-				// the author hasn´t changed therefore the
+			if (runner.value.meta.author == currentAuthor && runner.value.meta.ignoreColor == blockIgnoreColors) {
+				// the author and/or ignoreColor hasn´t changed therefore the
 				// current block is not to be closed yet....
+
+				if (runner.value.meta.headingStart) {
+					headingStart.push(counter);
+					headingTypes[counter] = runner.value.meta.headingStart;
+				}
 
 				if (runner.value.content == "\n") {
 					// we found a linebreak, put the index in the list
 					lineBreaks.push(counter);
 				}
-
 				counter++;
-
 			} else {
-				/* We are encountering a different author.
+				/* We are encountering a different author and/or a change
+				in the colorIgnore setting. 
 				So we have to save the data we gathered regarding
 				the previous block to the list and reinitialise
 				our variables.
 				*/
-				const completedBlock: MiniMapDataUnit = {author: currentAuthor, blockLength: counter};
+				const completedBlock: MiniMapDataUnit = { author: currentAuthor, blockLength: counter };
+				if (blockIgnoreColors)
+					completedBlock.ignoreColor = true;
 				if (lineBreaks.length) {
 					completedBlock.lineBreakIndices = lineBreaks;
 				}
+
+				if (headingStart.length) {
+					completedBlock.headingStartIndices = headingStart;
+					completedBlock.headingTypes = headingTypes;
+				}
+
 				outList.push(completedBlock);
 				currentAuthor = runner.value.meta.author;
+				blockIgnoreColors = runner.value.meta.ignoreColor;
 				counter = 1;
 				lineBreaks = [];
+
+				headingStart = [];
+				headingTypes = {};
 				if (runner.value.content == "\n") {
 					// case: the first character of this
 					// new block is a linebreak
 					lineBreaks.push(0);
+				}
+				if (runner.value.meta.headingStart) {
+					// first character is a heading start
+					headingStart.push(counter);
+					headingTypes[counter] = runner.value.meta.headingStart;
 				}
 			}
 			runner = runner.next;
 		}
 
 		// need to close the final block. The tail is never part of any block.
-		const completedBlock: MiniMapDataUnit = {author: currentAuthor, blockLength: counter};
+		const completedBlock: MiniMapDataUnit = { author: currentAuthor, blockLength: counter };
+		if (blockIgnoreColors)
+			completedBlock.ignoreColor = true;
 		if (lineBreaks.length) {
 			completedBlock.lineBreakIndices = lineBreaks;
+		}
+
+		if (headingStart.length) {
+			completedBlock.headingStartIndices = headingStart;
+			completedBlock.headingTypes = headingTypes;
 		}
 		outList.push(completedBlock);
 
@@ -283,7 +384,7 @@ export default class ChangesetProcessor {
 	 */
 	private async getRevs() {
 		const promises: Promise<void>[] = [];
-		for (let i = (this.listRevStatus + 1) ? this.listRevStatus + 1 : 0; i <= (this.padHead ? this.padHead : 0); i++) {
+		for (let i = this.listRevStatus + 1; i <= (this.padHead ? this.padHead : 0); i++) {
 			promises.push(this.getRev(i));
 		}
 
@@ -299,7 +400,7 @@ export default class ChangesetProcessor {
 		const data = await this.docScope?.get("pad:" + this.padName + ":revs:" + revNumber);
 		const revData = data as PadRev;
 		const cs = Changeset.unpack(revData.value.changeset);
-		this.revData[revNumber] = {cset: cs, author: revData.value.meta.author, timestamp: revData.value.meta.timestamp};
+		this.revData[revNumber] = { cset: cs, author: revData.value.meta.author, timestamp: revData.value.meta.timestamp };
 	}
 
 
@@ -310,11 +411,93 @@ export default class ChangesetProcessor {
 		return this.list.toString();
 	}
 
+	/**
+	 * For debugging purposes only.
+	 * Colorless characters are replaced by '@'
+	 * @returns the text with colorless characters marked
+	 */
+	public getIgnoreColorText(): string {
+		return this.list.getIgnoreColorText();
+	}
+
+	public getHeadingTestText(): string {
+		return this.list.getHeadingTestText();
+	}
+
 	/**For debugging purposes.
 	 *
 	 */
 	public clearList() {
 		this.list.eraseAllNodes();
+	}
+
+	/**Transforms the attribs string from
+	 * an op into a list
+	 * @param attribs 
+	 * @returns a list of attributes
+	 */
+	private attribsToList(attribs: string): string[] {
+		return attribs.substring(1, attribs.length).split("*");
+	}
+
+	/**
+	 * 
+	 * @param attribs the attribs string from an op
+	 * @returns the id of the first author attribute found, excluding the blank author.
+	 * @throws error, if no author is found
+	 */
+	public extractAuthorKeyFromAttribs(attribs: string): string {
+		if (attribs == "") throw new Error("no author attrib");
+		let out = "";
+		this.attribsToList(attribs).forEach(entry => {
+			if (this.authorKeys.includes(entry) && out == "") {
+				out = entry;
+			}
+		});
+		if (out == "")
+			throw new Error("no author attrib");
+		return out;
+	}
+
+	private extractHeadingKeyFromAttribs(attribs: string): string {
+		let out = "";
+		this.attribsToList(attribs).forEach(entry => {
+			if (this.attrToHeadingMapping[entry])
+				out = this.attrToHeadingMapping[entry];
+		})
+		return out;
+	}
+
+	/**Allows convenient access to the numToAttrib
+	 * section of padInfo
+	 * 
+	 * @param key 
+	 * @param index 
+	 * @returns data
+	 */
+	public getFromNumToAttrib(key: string, index: number) {
+		if (this.padInfo) {
+			const attrs = this.padInfo.value.pool.numToAttrib;
+			const entry = attrs[key];
+			return entry[index];
+		}
+		logService.warn(ChangesetProcessor.name + " " + this.padName, "padInfo not initialised");
+		return "";
+	}
+
+	/**For debugging
+	 * 
+	 * @returns 
+	 */
+	public getAuthorAttribMapping() {
+		const out = [];
+		if (this.padInfo)
+			for (const key in this.authorKeys) {
+				const data = { [key]: this.padInfo.value.pool.numToAttrib[key] };
+				out.push(data);
+
+			}
+		return out;
 	}
 
 }

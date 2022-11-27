@@ -56,6 +56,22 @@ export default class AuthorBlocksRouter implements Router {
 			res.status(200).send("deleting list");
 			return;
 		}
+		if(_req.query["testdata"]=="2"){
+			res.status(200).send(csproc.getIgnoreColorText());
+			return;
+		}
+		if(_req.query["testdata"]=="3"){
+			res.status(200).send(csproc.getAuthorAttribMapping());
+			return;
+		}
+		if(_req.query["testdata"]=="4"){
+			res.status(200).send(csproc.authorUNDOAnomalyCounter);
+			return;
+		}
+		if(_req.query["testdata"]=="5"){
+			res.status(200).send(csproc.getHeadingTestText());
+			return;
+		}
 
 		const list = csproc.getAuthorBlockList();
 		logService.debug(AuthorBlocksRouter.name, "delivered block info for padName '" + padName + "' to " + _req.ip);
