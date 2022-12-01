@@ -3,6 +3,7 @@ import {ConstructorOf} from "../../constructor-of.interface";
 import Router from "./router.interface";
 import logService from "../log/log.service";
 import {Application} from "express";
+import {moodleUserMiddleware} from "../middleware/moodle-user.middleware";
 
 class RouterService {
 
@@ -12,6 +13,7 @@ class RouterService {
 	 * @param app The express application to register routes in.
 	 */
 	public init(app: Application): void {
+		app.use(moodleUserMiddleware);
 		(routers as ConstructorOf<Router>[]).forEach(router => {
 			logService.debug(RouterService.name, "Registering router: " + router.name);
 			new router().init(app);

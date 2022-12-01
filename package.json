@@ -25,8 +25,10 @@
     "typescript": "^4.8.4"
   },
   "dependencies": {
+    "@types/jsonwebtoken": "^8.5.9",
     "cors": "^2.8.5",
     "express": "^4.18.2",
+    "jsonwebtoken": "^8.5.1",
     "nano": "^10.1.0",
     "winston": "^3.8.2"
   }
