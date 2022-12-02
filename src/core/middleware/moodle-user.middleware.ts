@@ -18,7 +18,6 @@ export const moodleUserMiddleware = (req: Request, res: Response, next: NextFunc
 		if (err || !decoded) {
 			LogService.error("Middleware", "Cannot decode token: " + err?.name);
 			res.status(401).end();
-			return;
 		} else {
 			res.locals.user = decoded as MoodleUser;
 			next();
@@ -40,7 +39,7 @@ export interface MoodleUser {
 	 * A flag determining if the user has moderation permissions.
 	 */
 	isModerator: boolean,
-	
+
 	/**
 	 * The id of the group in etherpad.
 	 */

@@ -1,4 +1,4 @@
-import nano, {DocumentScope, DocumentViewParams, DocumentViewResponse} from "nano";
+import nano, {DocumentScope, DocumentViewParams, DocumentViewResponse, MaybeDocument, ViewDocument} from "nano";
 import logService from "../log/log.service";
 import {MaybeRevisionedViewDocument} from "./maybe-revisioned-view-document.type";
 
@@ -43,7 +43,7 @@ export class CouchDbService {
 	 * @param db The database connection to work with.
 	 * @param document The document to insert.
 	 */
-	public async insert<D>(db: DocumentScope<D>, document: MaybeRevisionedViewDocument<D>): Promise<boolean> {
+	public async insert<D>(db: DocumentScope<D>, document: ViewDocument<D> | D & MaybeDocument): Promise<boolean> {
 		try {
 			await db.insert(document);
 			return true;
