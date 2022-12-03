@@ -123,7 +123,7 @@ class TupleFormat {
   ...
 	}
  */
-interface PadGroupedFormat {
+export interface PadGroupedFormat {
 	[pad: string]: { authors: string[], moodleIDs: string[], ratios: number[], colors: string[] };
 }
 

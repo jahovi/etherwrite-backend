@@ -1,5 +1,5 @@
 import { Application, Request, Response } from "express";
-import AuthoringRatiosCalculator from "./core/authoring-ratios-service/authoring-ratios-calculator";
+import AuthoringRatiosCalculator, { PadGroupedFormat } from "./core/authoring-ratios-service/authoring-ratios-calculator";
 import Router from "./core/router/router.interface";
 
 /**
@@ -33,22 +33,8 @@ export default class AuthoringRatiosRouter implements Router {
 					} else {
 						// if current user is not a moderator: construct result object containing author, ID, ratio and color
 						// data for the current user and aggregated data for other authors
-						const userIndex = authoringRatios[pad].moodleIDs.indexOf(res.locals.user.userId);
-						let othersRatio = 0;
-						for (let i = 0; i < authoringRatios[pad].ratios.length; i++) {
-							if (i !== userIndex) {
-								othersRatio += authoringRatios[pad].ratios[i];
-							}
-						}
-						const userAuthor = authoringRatios[pad].authors[userIndex];
-						const userColor = authoringRatios[pad].colors[userIndex];
-						const userRatio = authoringRatios[pad].ratios[userIndex];
-						const result = {
-							authors: [userAuthor, "Andere"],
-							moodleIDs: [res.locals.user.userId.toString(), null],
-							ratios: [userRatio, othersRatio],
-							colors: [userColor, "#808080"],
-						}
+						const usersMoodleId: string = res.locals.user.userId.toString();
+						const result = aggregateRatios(authoringRatios, pad, usersMoodleId);
 						res.status(200).send(result)
 					}
 				} else {
@@ -64,4 +50,34 @@ export default class AuthoringRatiosRouter implements Router {
 			}
 		}
 	}
+}
+
+/**
+ * Takes authoring ratios in pad grouped format and returns for a specific pad an object containing aggregate ratios: 
+ * an object containing two ratio: one for the current user and one that equals the sum of the ratios of the other users.
+ * The other users's ratio is assign the color gray.
+ * 
+ * @param authoringRatios as returned by the calculateAuthoringRatios method of AuthoringRatios calculator
+ * @param pad the pad for which to calculate aggregated ratios
+ * @param usersMoodleId the moodle Id of the current user
+ * @returns aggregated authoring ratios
+ */
+function aggregateRatios(authoringRatios: PadGroupedFormat, pad: string, usersMoodleId: string) {
+	const userIndex = authoringRatios[pad].moodleIDs.indexOf(usersMoodleId);
+	let othersRatio = 0;
+	for (let i = 0; i < authoringRatios[pad].ratios.length; i++) {
+		if (i !== userIndex) {
+			othersRatio += authoringRatios[pad].ratios[i];
+		}
+	}
+	const userAuthor = authoringRatios[pad].authors[userIndex];
+	const userColor = authoringRatios[pad].colors[userIndex];
+	const userRatio = authoringRatios[pad].ratios[userIndex];
+	const result = {
+		authors: [userAuthor, "Andere"],
+		moodleIDs: [usersMoodleId, null],
+		ratios: [userRatio, othersRatio],
+		colors: [userColor, "#808080"],
+	};
+	return result;
 }
