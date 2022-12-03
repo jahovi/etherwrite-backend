@@ -75,8 +75,10 @@ The order in which the elements in this list are placed is identical to the orde
 
 ### /authoring_ratios
 
-Returns as json an object containing author, authoring ratio and color information for a pad. Without arguments, data for all pads is
-returned. Example:
+Returns as json an object containing author, authoring ratio and color information for a pad. Without arguments data for all pads is
+returned. If the current user is not a moderator calls without a pad argument will be denied.
+
+Example:
 
 ```js
 {
@@ -96,7 +98,7 @@ returned. Example:
 }
 ```
 
-With an argument of `pad=PADNAME`, only data for the specified pad will be returned. Example:
+With an argument of `pad=PADNAME`, only data for the specified pad will be returned. If the current user is a moderator, individual users' values will be returned. Example:
 
 ```js
 {
@@ -104,6 +106,17 @@ With an argument of `pad=PADNAME`, only data for the specified pad will be retur
   moodleIDs: [moodleIDAuthor1, moodleIDAuthor2, ...],
   ratios: [anteilAutor1, anteilAutor2, ...],
   colors: [farbeAutor1, farbeAutor2, ...]
+}
+```
+
+If the current user is not a moderator, other users' values will be aggregated like so:
+
+```js
+{
+  authors: [nameAuthor1, "Andere"],
+  moodleIDs: [moodleIDAuthor1, null],
+  ratios: [anteilAutor1, summierterAnteilDerAnderen],
+  colors: [farbeAutor1, "#808080"]
 }
 ```
 
