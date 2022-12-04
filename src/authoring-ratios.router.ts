@@ -34,7 +34,7 @@ export default class AuthoringRatiosRouter implements Router {
 						// if current user is not a moderator: construct result object containing author, ID, ratio and color
 						// data for the current user and aggregated data for other authors
 						const usersMoodleId: string = res.locals.user.userId.toString();
-						const result = aggregateRatios(authoringRatios, pad, usersMoodleId);
+						const result = aggregateRatiosOfOtherUsers(authoringRatios, pad, usersMoodleId);
 						res.status(200).send(result)
 					}
 				} else {
@@ -62,22 +62,25 @@ export default class AuthoringRatiosRouter implements Router {
  * @param usersMoodleId the moodle Id of the current user
  * @returns aggregated authoring ratios
  */
-function aggregateRatios(authoringRatios: PadGroupedFormat, pad: string, usersMoodleId: string) {
-	const userIndex = authoringRatios[pad].moodleIDs.indexOf(usersMoodleId);
-	let othersRatio = 0;
-	for (let i = 0; i < authoringRatios[pad].ratios.length; i++) {
+function aggregateRatiosOfOtherUsers(authoringRatios: PadGroupedFormat, pad: string, usersMoodleId: string) {
+	const otherUsersColor = "#808080"; // gray
+	const numberOfUsers = authoringRatios[pad].ratios.length;
+	const userIndex = authoringRatios[pad].moodleIDs.indexOf(usersMoodleId); // index of the current users data in the authors, moodleIDs, ratios, colors arrays
+	let aggregateRatioOfOtherUsers = 0;
+	for (let i = 0; i < numberOfUsers; i++) {
 		if (i !== userIndex) {
-			othersRatio += authoringRatios[pad].ratios[i];
+			// sum authoring ratios of other users
+			aggregateRatioOfOtherUsers += authoringRatios[pad].ratios[i];
 		}
 	}
-	const userAuthor = authoringRatios[pad].authors[userIndex];
-	const userColor = authoringRatios[pad].colors[userIndex];
-	const userRatio = authoringRatios[pad].ratios[userIndex];
+	const currentUserAuthor = authoringRatios[pad].authors[userIndex];
+	const currentUserColor = authoringRatios[pad].colors[userIndex];
+	const currentUserRatio = authoringRatios[pad].ratios[userIndex];
 	const result = {
-		authors: [userAuthor, "Andere"],
+		authors: [currentUserAuthor, `${numberOfUsers - 1} Andere`],
 		moodleIDs: [usersMoodleId, null],
-		ratios: [userRatio, othersRatio],
-		colors: [userColor, "#808080"],
+		ratios: [currentUserRatio, aggregateRatioOfOtherUsers],
+		colors: [currentUserColor, otherUsersColor],
 	};
 	return result;
 }
