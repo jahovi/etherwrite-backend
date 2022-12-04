@@ -17,8 +17,12 @@ export default class PadRegistry {
 	 * Later calls make the PadRegsitry look for newly
 	 * created pads in the database.
 	 */
-	public static async initAndUpdate() {
+	public static async init() {
 		PadRegistry.initIgnoreList();
+		return this.initAndUpdate();
+	}
+
+	public static async initAndUpdate() {
 		const timestamp = Date.now();
 		if (PadRegistry.lastUpdate + PadRegistry.updateDelay > timestamp) {
 			// refusing update if the previous update was not too long ago
@@ -73,12 +77,10 @@ export default class PadRegistry {
 	private static initIgnoreList() {
 		if (process.env.PADS_IGNORE) {
 			const list = process.env.PADS_IGNORE.split(",");
-			PadRegistry.padIgnoreList = [];
-			list.forEach((name) => PadRegistry.padIgnoreList.push(name.trim()));
-		}
-		if (PadRegistry.padIgnoreList.length > PadRegistry.ignoreListLength) {
-			logService.info(PadRegistry.name, "IgnoreList: " + PadRegistry.padIgnoreList);
-			PadRegistry.ignoreListLength = PadRegistry.padIgnoreList.length;
+			if (list.length) {
+				logService.info(PadRegistry.name, "IgnoreList: " + PadRegistry.padIgnoreList);
+				PadRegistry.padIgnoreList = list.map(name => name.trim());
+			}
 		}
 	}
 

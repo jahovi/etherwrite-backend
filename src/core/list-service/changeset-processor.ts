@@ -5,7 +5,7 @@ import DLList from "./double-linked-list";
 import PadInfo from "./padinfo.interface";
 import PadRev from "./pad-rev.interface";
 import AuthorRegistry from "../../author-registry";
-import { MiniMapDataUnit } from "./mini-map-data-unit.type";
+import {MiniMapDataUnit} from "./mini-map-data-unit.type";
 import LogService from "../log/log.service";
 import logService from "../log/log.service";
 
@@ -22,12 +22,13 @@ import logService from "../log/log.service";
  *This linked list provides the opportunity to efficiently generate
  *data structures in a shape that fits the needs of the frontend use
  *cases, such as the minimap and other dashboard charts, that require
- *information especially regarding the quantity of author contributions. 
- *Instances of this class are created by the PadRegistry-class. 
+ *information especially regarding the quantity of author contributions.
+ *Instances of this class are created by the PadRegistry-class.
  */
 export default class ChangesetProcessor {
 
 	public static readonly instanceRegistry: { [padName: string]: ChangesetProcessor } = {};
+	public static readonly unknownAuthor = "-unknown-";
 
 	private static blocksUpdateDelay = Number(process.env.CSP_UPDATE_DELAY) || 5000;
 	/* milliseconds -- the minimum timespan, before a newer version of
@@ -50,17 +51,15 @@ export default class ChangesetProcessor {
 	private blankKey = ""; /* contains the attribute key if an anonymous author is used by etherpad
 								 to designate a char as colorless  */
 	public authorUNDOAnomalyCounter: { [key: string]: number } = {}; /* counter for _possible_ abuse cases per author
-																		NOTE: It cannot be determined here whether an 
+																		NOTE: It cannot be determined here whether an
 																		author has actually gained an advantage at the
 																		expense of other users. It´s just as possible that
 																		the number of characters counted here where already
 																		previously his own*/
 
-	public lastActivityTimeStamp:{[key:string]:number} = {};
+	public lastActivityTimeStamp: { [key: string]: number } = {};
 
 	private attrToHeadingMapping: { [key: string]: string } = {};
-
-
 
 
 	/**
@@ -133,11 +132,10 @@ export default class ChangesetProcessor {
 					if (!this.authorUNDOAnomalyCounter[entry[1]]) {
 						this.authorUNDOAnomalyCounter[entry[1]] = 0;
 					}
-					if(!this.lastActivityTimeStamp[entry[1]]){
+					if (!this.lastActivityTimeStamp[entry[1]]) {
 						this.lastActivityTimeStamp[entry[1]] = 0;
 					}
-				}
-				else {
+				} else {
 					this.blankKey = String(i);
 				}
 			}
@@ -201,14 +199,15 @@ export default class ChangesetProcessor {
 				// we need to insert one or more characters
 				case "+": {
 					let applyIgnoreColor = false;
-					let author: string; // the etherpad id 
+					let author: string; // the etherpad id
 					try {
 						// trying to find author in attribs
 						const authorKey = this.extractAuthorKeyFromAttribs(currentOp.attribs);
 						author = this.getFromNumToAttrib(authorKey, 1);
-						if (author == "") throw new Error();
-					}
-					catch {
+						if (author == "") {
+							throw new Error();
+						}
+					} catch {
 						// else use author data from revdata
 						author = currentRevData.author;
 
@@ -221,7 +220,7 @@ export default class ChangesetProcessor {
 						applyIgnoreColor = true;
 					}
 
-					// is equal to "" unless a heading start symbol is set. 
+					// is equal to "" unless a heading start symbol is set.
 					// otherwise will contain the size, i.e "h1", "h2", "h3" or "h4"
 					const headingType = this.extractHeadingKeyFromAttribs(currentOp.attribs);
 
@@ -321,12 +320,12 @@ export default class ChangesetProcessor {
 				counter++;
 			} else {
 				/* We are encountering a different author and/or a change
-				in the colorIgnore setting. 
+				in the colorIgnore setting.
 				So we have to save the data we gathered regarding
 				the previous block to the list and reinitialise
 				our variables.
 				*/
-				const completedBlock: MiniMapDataUnit = { author: currentAuthor, blockLength: counter };
+				const completedBlock: MiniMapDataUnit = {author: currentAuthor, blockLength: counter};
 				if (blockIgnoreColors)
 					completedBlock.ignoreColor = true;
 				if (lineBreaks.length) {
@@ -361,7 +360,7 @@ export default class ChangesetProcessor {
 		}
 
 		// need to close the final block. The tail is never part of any block.
-		const completedBlock: MiniMapDataUnit = { author: currentAuthor, blockLength: counter };
+		const completedBlock: MiniMapDataUnit = {author: currentAuthor, blockLength: counter};
 		if (blockIgnoreColors)
 			completedBlock.ignoreColor = true;
 		if (lineBreaks.length) {
@@ -400,7 +399,7 @@ export default class ChangesetProcessor {
 		const data = await this.docScope?.get("pad:" + this.padName + ":revs:" + revNumber);
 		const revData = data as PadRev;
 		const cs = Changeset.unpack(revData.value.changeset);
-		this.revData[revNumber] = { cset: cs, author: revData.value.meta.author, timestamp: revData.value.meta.timestamp };
+		this.revData[revNumber] = {cset: cs, author: revData.value.meta.author, timestamp: revData.value.meta.timestamp};
 	}
 
 
@@ -433,7 +432,7 @@ export default class ChangesetProcessor {
 
 	/**Transforms the attribs string from
 	 * an op into a list
-	 * @param attribs 
+	 * @param attribs
 	 * @returns a list of attributes
 	 */
 	private attribsToList(attribs: string): string[] {
@@ -441,7 +440,7 @@ export default class ChangesetProcessor {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param attribs the attribs string from an op
 	 * @returns the id of the first author attribute found, excluding the blank author.
 	 * @throws error, if no author is found
@@ -454,8 +453,9 @@ export default class ChangesetProcessor {
 				out = entry;
 			}
 		});
-		if (out == "")
+		if (out == "") {
 			throw new Error("no author attrib");
+		}
 		return out;
 	}
 
@@ -470,9 +470,9 @@ export default class ChangesetProcessor {
 
 	/**Allows convenient access to the numToAttrib
 	 * section of padInfo
-	 * 
-	 * @param key 
-	 * @param index 
+	 *
+	 * @param key
+	 * @param index
 	 * @returns data
 	 */
 	public getFromNumToAttrib(key: string, index: number) {
@@ -486,14 +486,14 @@ export default class ChangesetProcessor {
 	}
 
 	/**For debugging
-	 * 
-	 * @returns 
+	 *
+	 * @returns
 	 */
 	public getAuthorAttribMapping() {
 		const out = [];
 		if (this.padInfo)
 			for (const key in this.authorKeys) {
-				const data = { [key]: this.padInfo.value.pool.numToAttrib[key] };
+				const data = {[key]: this.padInfo.value.pool.numToAttrib[key]};
 				out.push(data);
 
 			}

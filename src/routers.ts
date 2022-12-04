@@ -1,17 +1,11 @@
 import DBTestRouter from "./db-test.router";
-import TestRouter from "./test.router";
-import AuthorBlocksRouter from "./author-blocks.router";
-import AuthorInfoRouter from "./author-info.router";
 import AuthoringRatiosRouter from "./authoring-ratios.router";
 import EtherpadRouter from "./etherpad.router";
-import ScrollPosRouter from "./scroll-pos.router";
+import MinimapRouter from "./minimap.router";
 
 export default [
-	TestRouter,
 	DBTestRouter,
-	AuthorBlocksRouter,
-	AuthorInfoRouter,
+	MinimapRouter,
 	AuthoringRatiosRouter,
 	EtherpadRouter,
-	ScrollPosRouter,
 ];

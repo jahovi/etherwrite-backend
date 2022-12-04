@@ -39,7 +39,7 @@ export default class AuthoringRatiosCalculator {
 			}
 			const authoredChars = Math.max(row.value, 0);
 			const totalCharsInPad = totalCharsPerPadResponse.rows.find(({key}) => key === pad)?.value; // the find expression finds the object in the array containing the total num of chars for the pad in question
-			if (!totalCharsInPad) {
+			if (totalCharsInPad === undefined) {
 				throw new Error(`Total number of chars not found for pad ${pad}`);
 			}
 			let authoringRatio = 0;

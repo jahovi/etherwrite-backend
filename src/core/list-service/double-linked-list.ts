@@ -1,30 +1,31 @@
 import ListNode from "./list-node";
+import logService from "../log/log.service";
 
-/**An instance of this class provides a 
- * double linked list with methods that 
+/**An instance of this class provides a
+ * double linked list with methods that
  * support the purposes of the changeset
- * processor class. 
+ * processor class.
  */
 export default class DLList {
 	public readonly head: ListNode;
 	public readonly tail: ListNode; // the last element in the list
 
-	/**'current' is a special pointer that supports 
-	 * the list building in the changeset processor 
-	 * class. 
-	 * Please avoid using it for any other 
+	/**'current' is a special pointer that supports
+	 * the list building in the changeset processor
+	 * class.
+	 * Please avoid using it for any other
 	 * purpose, especially if you just want to perform
-	 * read operations in the list, just use a local 
-	 * pointer variable instead. 
-	*/
+	 * read operations in the list, just use a local
+	 * pointer variable instead.
+	 */
 	public current: ListNode;
 
-	/**Creates a instance. Automatically 
+	/**Creates a instance. Automatically
 	 * creates a head element, that carries
 	 * no information but supports the
 	 * structural integrity. A tail element
 	 * is created too. It carries the initial
-	 * linebreak. 
+	 * linebreak.
 	 */
 	public constructor() {
 		this.head = new ListNode("", "");
@@ -36,10 +37,10 @@ export default class DLList {
 		this.tail.next = undefined;
 	}
 
-	/**Move the 'current' pointer the given number of 'steps' 
+	/**Move the 'current' pointer the given number of 'steps'
 	 * forward, counting from the current element. Make sure
-	 * you are aware where the current-pointer is set to 
-	 * before calling. 
+	 * you are aware where the current-pointer is set to
+	 * before calling.
 	 * @param steps a non negative integer
 	 * @throws an error if you try to iterate beyond the tail of the list
 	 */
@@ -48,20 +49,21 @@ export default class DLList {
 			if (this.current.next)
 				this.current = this.current.next;
 			else {
+				console.log(this.current, this.head, this.tail);
 				throw new Error("cannot move further forward");
 			}
 		}
 	}
 
-	/** Set the current pointer to the head of the list. 
+	/** Set the current pointer to the head of the list.
 	 */
 	public setToHead() {
 		this.current = this.head;
 	}
 
-	/**Removes the element, that comes next after element the 'current' pointer 
-	 * points at. 
-	 * @throws an error if you try to remove the head element. 
+	/**Removes the element, that comes next after element the 'current' pointer
+	 * points at.
+	 * @throws an error if you try to remove the head element.
 	 */
 	public removeAfterCurrent(): void {
 		if (this.current.next) {
@@ -83,43 +85,43 @@ export default class DLList {
 		}
 	}
 
-	/**Inserts a string after the element with the 'current' 
-	 * pointer and moves the current pointer to the newly 
-	 * inserted element. 
-	 * 
-	 * @param val a string of length 1 
+	/**Inserts a string after the element with the 'current'
+	 * pointer and moves the current pointer to the newly
+	 * inserted element.
+	 *
+	 * @param val a string of length 1
 	 * @param author the id of the author
 	 */
-	public insertAfterCurrentAndMoveCurrent(val: string, author: string, ignoreColor: boolean, headingType:string): void {
+	public insertAfterCurrentAndMoveCurrent(val: string, author: string, ignoreColor: boolean, headingType: string): void {
 		this.insertAfterCurrent(val, author, ignoreColor, headingType);
 		if (this.current.next)
 			this.current = this.current.next;
 	}
 
-	/**Inserts a string after the element with the 'current' 
+	/**Inserts a string after the element with the 'current'
 	 * pointer. The current pointer does not change!
-	 * 
-	 * @param val a string of length 1 
+	 *
+	 * @param val a string of length 1
 	 * @param author the id of the author
 	 */
-	public insertAfterCurrent(val: string, author: string, ignoreColor: boolean, headingType:string): void {
+	public insertAfterCurrent(val: string, author: string, ignoreColor: boolean, headingType: string): void {
 		if (val.length != 1) {
 			throw new Error("only one char allowed");
 		}
 		if (author.length < 1) {
-
-			throw new Error("must specify author name");
+			logService.warn(DLList.name, "must specify author name");
+			return;
 		}
 		if (this.current == this.tail) {
 			throw new Error("cannot insert after tail element");
 		}
 		const newNode = new ListNode(val, author);
-		if(ignoreColor)
-			newNode.value.meta.ignoreColor=true;
-		if(headingType)
-			newNode.value.meta.headingStart=headingType;
-		
-		
+		if (ignoreColor)
+			newNode.value.meta.ignoreColor = true;
+		if (headingType)
+			newNode.value.meta.headingStart = headingType;
+
+
 		const formerNext = this.current.next;
 		if (formerNext) {
 			// we are not at the tail of the list
@@ -130,8 +132,8 @@ export default class DLList {
 		}
 	}
 
-	/**Deletes all nodes except head and tail. 
-	 * 
+	/**Deletes all nodes except head and tail.
+	 *
 	 */
 	public eraseAllNodes(): void {
 		this.setToHead();
@@ -143,7 +145,7 @@ export default class DLList {
 	/**
 	 * Sets a number of nodes after 'current'
 	 * to ignoreColor=true
-	 * 
+	 *
 	 * @param steps - the number of affected nodes
 	 */
 	public setIgnoreColor(steps: number) {
@@ -153,17 +155,17 @@ export default class DLList {
 		}
 	}
 
-	public changeAttributesOfNextChar(ignoreColor: boolean, headingType:string) {
+	public changeAttributesOfNextChar(ignoreColor: boolean, headingType: string) {
 		this.moveFwd(1);
-		if(ignoreColor)
+		if (ignoreColor)
 			this.current.value.meta.ignoreColor = ignoreColor;
-		if(headingType)
+		if (headingType)
 			this.current.value.meta.headingStart = headingType;
 	}
 
 
 	/**Position after head, head is 0.
-	 * May be useful for debugging. 
+	 * May be useful for debugging.
 	 */
 	public getNodePos(): number {
 		let runner = this.head.next;
@@ -175,7 +177,7 @@ export default class DLList {
 		return count;
 	}
 
-	/**Mainly for testing. Should be identical to the text of the etherpad. 
+	/**Mainly for testing. Should be identical to the text of the etherpad.
 	 * @returns the string content of the list put together.
 	 */
 	public toString(): string {
@@ -206,11 +208,11 @@ export default class DLList {
 		return output;
 	}
 
-	public getHeadingTestText():string {
+	public getHeadingTestText(): string {
 		let output = "";
 		let runner = this.head;
 		while (runner.next) {
-			output += runner.value.meta.headingStart ? "#"+runner.value.meta.headingStart+"#" : runner.value.content;
+			output += runner.value.meta.headingStart ? "#" + runner.value.meta.headingStart + "#" : runner.value.content;
 			runner = runner.next;
 		}
 		output += this.tail.value.content;
