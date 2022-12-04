@@ -53,9 +53,8 @@ export default class AuthoringRatiosRouter implements Router {
 }
 
 /**
- * Takes authoring ratios in pad grouped format and returns for a specific pad an object containing aggregate ratios: 
- * an object containing two ratio: one for the current user and one that equals the sum of the ratios of the other users.
- * The other users's ratio is assign the color gray.
+ * Takes authoring ratios in pad grouped format and returns for a specific pad an object containing the current user's ratio
+ * and an aggregate ratio equalling the sum of the ratios of the other users.
  * 
  * @param authoringRatios as returned by the calculateAuthoringRatios method of AuthoringRatios calculator
  * @param pad the pad for which to calculate aggregated ratios
