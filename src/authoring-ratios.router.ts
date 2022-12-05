@@ -62,7 +62,6 @@ export default class AuthoringRatiosRouter implements Router {
  * @returns aggregated authoring ratios
  */
 function aggregateRatiosOfOtherUsers(authoringRatios: PadGroupedFormat, pad: string, usersMoodleId: string) {
-	const otherUsersColor = "#808080"; // gray
 	const numberOfUsers = authoringRatios[pad].ratios.length;
 	const userIndex = authoringRatios[pad].moodleIDs.indexOf(usersMoodleId); // index of the current users data in the authors, moodleIDs, ratios, colors arrays
 	let aggregateRatioOfOtherUsers = 0;
@@ -75,6 +74,9 @@ function aggregateRatiosOfOtherUsers(authoringRatios: PadGroupedFormat, pad: str
 	const currentUserAuthor = authoringRatios[pad].authors[userIndex];
 	const currentUserColor = authoringRatios[pad].colors[userIndex];
 	const currentUserRatio = authoringRatios[pad].ratios[userIndex];
+	const colorBlueGray = "#647C90";
+	const colorBrownGray = "#746C70"
+	const otherUsersColor = (currentUserColor !== colorBlueGray) ? colorBlueGray : colorBrownGray; // Have a fallback color in case the user has picked the one
 	const result = {
 		authors: [currentUserAuthor, `${numberOfUsers - 1} Andere`],
 		moodleIDs: [usersMoodleId, null],
