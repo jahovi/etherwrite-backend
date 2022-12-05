@@ -2,6 +2,7 @@ import {DocumentViewResponse} from "nano";
 import couchDbService from "../couch/couch-db.service";
 import AuthorRegistry from "../../author-registry";
 import LogService from "../log/log.service";
+import {PadGroupedFormat} from "./pad-grouped-format.interface";
 
 /**
  * Class to retrieve data about number of characters by each author and total characters in each pad from the db,
@@ -104,26 +105,3 @@ class TupleFormat {
 		this.color = color;
 	}
 }
-
-/**
- * Example of an Object in this format:
- * {
- * 		nameOfFirstPad: {
-			authors: [nameAuthor1, nameAuthor2, ...],
-			moodleIDs: [moodleIDAuthor1, moodleIDAuthor2, ...],
-			ratios: [ratioAutor1, ratioAutor2, ...],
-			colors: [colorAutor1, colorAutor2, ...]
-  		}
-  		nameOfSecondPad: {
-			authors: [nameAuthor1, nameAuthor2, ...],
-			moodleIDs: [moodleIDAuthor1, moodleIDAuthor2, ...],
-			ratios: [ratioAutor1, ratioAutor2, ...],
-			colors: [colorAutor1, colorAutor2, ...]
-  		}
-  ...
-	}
- */
-interface PadGroupedFormat {
-	[pad: string]: { authors: string[], moodleIDs: string[], ratios: number[], colors: string[] };
-}
-
