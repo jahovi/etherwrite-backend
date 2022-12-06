@@ -74,12 +74,6 @@ export default class TrackingService {
 							bottomIndex: dataEntry.lastTabScrolling.state.bottom.index,
 						};
 					}
-					// }
-					else {
-						console.log("a dropping " + author);
-						console.log("timestamp scroll " + dataEntry.lastTabScrolling.time);
-						console.log("timestamp disconnect " + dataEntry.lastDisconnected?.time);
-					}
 				}
 			}
 		});
@@ -170,10 +164,14 @@ export default class TrackingService {
 		Object.keys(TrackingService.instanceRegistry).forEach(padName => {
 			storage[padName] = [];
 		});
+		const authorsList: string[] = [];
 		data.rows.forEach(doc => {
 			const content = doc.value as TrackingData;
 
-			AuthorRegistry.put(content.user);
+			if(!authorsList.includes(content.user)){
+				AuthorRegistry.put(content.user);
+				authorsList.push(content.user);
+			}
 
 			/* Unfortunately ep-tracking doesn´t seem to initialise the
 			time property that is announced in the ep-tracking-readme.
@@ -184,7 +182,9 @@ export default class TrackingService {
 				timeStampPart = timeStampPart.substring(0, timeStampPart.indexOf(":"));
 				content.time = Number(timeStampPart);
 			}
-			content.debugtime = new Date(content.time).toString();
+			const date = new Date(0);
+			date.setUTCMilliseconds(content.time);
+			content.debugtime = date.toString();
 
 			if (storage[content.pad]) {
 				storage[content.pad].push(content);
