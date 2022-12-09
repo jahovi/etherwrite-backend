@@ -1,5 +1,5 @@
 import CouchDbService from "../couch/couch-db.service";
-import ChangesetProcessor from "../list-service/changeset-processor";
+import ChangesetProcessor from "../changeset-service/changeset-processor";
 import {MiniMapScrollPos} from "./minimapscrollpos.type";
 import {StructuredTrackingData} from "./structured-tracking-data-type";
 import {TrackingData} from "./trackingdata-type";

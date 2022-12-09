@@ -1,5 +1,8 @@
+import { ConstructorOf } from "./constructor-of.interface";
 import CouchDbService from "./core/couch/couch-db.service";
-import ChangesetProcessor from "./core/list-service/changeset-processor";
+import CS_Subscriber from "./core/changeset-service/cs-subscriber-abstract";
+import ChangesetProcessor from "./core/changeset-service/changeset-processor";
+import subscribers from "./core/changeset-service/subscribers";
 import logService from "./core/log/log.service";
 import TrackingService from "./core/tracking-service/tracking-service";
 
@@ -16,13 +19,9 @@ export default class PadRegistry {
 	/**Call this at startup to initialise the registry.
 	 * Later calls make the PadRegsitry look for newly
 	 * created pads in the database.
-	 */
-	public static async init() {
-		PadRegistry.initIgnoreList();
-		return this.initAndUpdate();
-	}
-
+	 */	
 	public static async initAndUpdate() {
+		PadRegistry.initIgnoreList();
 		const timestamp = Date.now();
 		if (PadRegistry.lastUpdate + PadRegistry.updateDelay > timestamp) {
 			// refusing update if the previous update was not too long ago
@@ -40,6 +39,9 @@ export default class PadRegistry {
 			if (padName && !ChangesetProcessor.instanceRegistry[padName]) {
 				new ChangesetProcessor(padName.toString());
 				infoMarker += 1;
+
+				// create instances of all subclasses of CS_Subscriber
+				(subscribers as ConstructorOf<CS_Subscriber>[]).forEach( subscriber => new subscriber(padName));
 			}
 			if (padName && !TrackingService.instanceRegistry[padName]) {
 				infoMarker += 2;
@@ -78,8 +80,11 @@ export default class PadRegistry {
 		if (process.env.PADS_IGNORE) {
 			const list = process.env.PADS_IGNORE.split(",");
 			if (list.length) {
-				logService.info(PadRegistry.name, "IgnoreList: " + PadRegistry.padIgnoreList);
 				PadRegistry.padIgnoreList = list.map(name => name.trim());
+				if(PadRegistry.padIgnoreList.length> this.ignoreListLength){
+					logService.info(PadRegistry.name, "IgnoreList: " + PadRegistry.padIgnoreList);
+					this.ignoreListLength = PadRegistry.padIgnoreList.length;
+				}
 			}
 		}
 	}

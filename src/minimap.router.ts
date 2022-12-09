@@ -1,10 +1,11 @@
 import Router from "./core/router/router.interface";
 import {Application, Request, Response} from "express";
-import ChangesetProcessor from "./core/list-service/changeset-processor";
 import logService from "./core/log/log.service";
 import PadRegistry from "./pads";
 import AuthorRegistry from "./author-registry";
 import TrackingService from "./core/tracking-service/tracking-service";
+import MinimapService from "./core/minimap-service/minimap-service";
+
 
 export default class MinimapRouter implements Router {
 
@@ -39,8 +40,8 @@ export default class MinimapRouter implements Router {
 			res.status(400).send("Query parameter \"padName\" is required.");
 			return;
 		}
-		const csproc = ChangesetProcessor.instanceRegistry[padName.toString()];
-		if (!csproc) {
+		const mmproc = MinimapService.instances[padName.toString()];
+		if (!mmproc) {
 			// padName apparently unknown
 			logService.info(MinimapRouter.name, "could not deliver block info for padName '" + padName + "' to " + _req.ip);
 
@@ -50,36 +51,8 @@ export default class MinimapRouter implements Router {
 			res.status(404).send([]);
 			return;
 		}
-		// just for debugging ...
-		if (_req.query["testdata"] == "1") {
-			res.status(200).send(csproc.getTextFromList());
-			return;
-		}
-		if (_req.query["del"] == "1") {
-			csproc.clearList();
-			res.status(200).send("deleting list");
-			return;
-		}
-		if (_req.query["testdata"] == "2") {
-			res.status(200).send(csproc.getIgnoreColorText());
-			return;
-		}
-		if (_req.query["testdata"] == "3") {
-			res.status(200).send(csproc.getAuthorAttribMapping());
-			return;
-		}
-		if (_req.query["testdata"] == "4") {
-			res.status(200).send(csproc.authorUNDOAnomalyCounter);
-			return;
-		}
-		if (_req.query["testdata"] == "5") {
-			res.status(200).send(csproc.getHeadingTestText());
-			return;
-		}
-
-		const list = csproc.getAuthorBlockList();
 		logService.debug(MinimapRouter.name, "delivered block info for padName '" + padName + "' to " + _req.ip);
-		res.status(200).send(list);
+		res.status(200).send(mmproc.minimapBlocklist);
 	}
 
 	/**
