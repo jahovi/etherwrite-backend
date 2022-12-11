@@ -1,9 +1,6 @@
-export type MiniMapScrollPos = {
-	[key: string]:
-		{
-			timeStamp: number,
-			debugTimeStamp: string,
-			topIndex: number,
-			bottomIndex?: number,
-		}
-}
+export type MiniMapScrollPos = Record<string, {
+	timeStamp: number,
+	debugTimeStamp: string,
+	topIndex: number,
+	bottomIndex?: number,
+}>;

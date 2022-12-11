@@ -5,7 +5,7 @@ import designDocumentService from "./core/couch/design-document.service";
 import logService from "./core/log/log.service";
 import routerService from "./core/router/router.service";
 import PadRegistry from "./pads";
-import AuthorRegistry from "./author-registry";
+import AuthorRegistry from "./core/authors/author-registry";
 import TrackingService from "./core/tracking-service/tracking-service";
 
 
@@ -29,7 +29,7 @@ designDocumentService.registerAllDocuments()
 	// prepare ChangesetProcessors for all known pads.
 	.then(() => PadRegistry.initAndUpdate())
 	// start TrackingService
-	.then(()=> TrackingService.initAndUpdate())
+	.then(() => TrackingService.initAndUpdate())
 	// initialise the server.
 	.then(() => app.listen(port, () => {
 		logService.info("EVA", `Listening on port ${port}!`);

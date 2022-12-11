@@ -1,16 +1,18 @@
-import CouchDbService from "./core/couch/couch-db.service";
-import AuthorData from "./core/changeset-service/global-author.interface";
-import LogService from "./core/log/log.service";
+import CouchDbService from "../couch/couch-db.service";
+import AuthorData from "../changeset-service/global-author.interface";
+import LogService from "../log/log.service";
+import logService from "../log/log.service";
+import {Author} from "./author.interface";
 
 export default class AuthorRegistry {
 
 	/**This list contains the authors
 	 * and their traits.
 	 */
-	public static knownAuthors: { [epid: string]: { epalias: string, color: string, mapper2author: string } } = {};
+	public static knownAuthors: Record<string, Author> = {};
 
 	/* This helps to protect the 'put' method from overheating*/
-	private static authorTimers: {[epid:string]:number} = {};
+	private static authorTimers: Record<string, number> = {};
 	private static mapperUpdateDelay = 5000;
 	private static mapperTimeStamp = 0;
 
@@ -35,7 +37,7 @@ export default class AuthorRegistry {
 	 */
 	public static put(authorId: string): void {
 		const timestamp = Date.now();
-		if(timestamp < AuthorRegistry.authorTimers[authorId]+AuthorRegistry.mapperUpdateDelay){
+		if (timestamp < AuthorRegistry.authorTimers[authorId] + AuthorRegistry.mapperUpdateDelay) {
 			// refusing update if the previous update was not too long ago
 			return;
 		}
@@ -44,7 +46,8 @@ export default class AuthorRegistry {
 			AuthorRegistry.authorTimers[authorId] = timestamp;
 		}
 		AuthorRegistry.authorTimers[authorId] = timestamp;
-		console.log("updating "+authorId);
+		logService.debug(AuthorRegistry.name, "Updating author: " + authorId);
+
 		// update aliases and color for this author
 		CouchDbService.getIfExists(AuthorRegistry.scope, "globalAuthor:" + authorId)
 			.then(data => {

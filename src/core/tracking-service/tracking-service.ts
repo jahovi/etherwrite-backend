@@ -3,7 +3,7 @@ import ChangesetProcessor from "../changeset-service/changeset-processor";
 import {MiniMapScrollPos} from "./minimapscrollpos.type";
 import {StructuredTrackingData} from "./structured-tracking-data-type";
 import {TrackingData} from "./trackingdata-type";
-import AuthorRegistry from "../../author-registry";
+import AuthorRegistry from "../authors/author-registry";
 
 /**
  * Collects and processes data from the tracking-entries in couch
@@ -14,7 +14,7 @@ import AuthorRegistry from "../../author-registry";
 export default class TrackingService {
 
 	/** Stores the instances of this class under the corresponding pad names*/
-	public static instanceRegistry: { [key: string]: TrackingService } = {};
+	public static instanceRegistry: Record<string, TrackingService> = {};
 	private static docScope = CouchDbService.getConnection("etherpad");
 
 	/* The amount of milliseconds that passes, before a general update of data occurs*/
@@ -92,7 +92,7 @@ export default class TrackingService {
 	 */
 	private getStructuredPadData() {
 		const data = this.padData;
-		const out: { [key: string]: StructuredTrackingData } = {};
+		const out: Record<string, StructuredTrackingData> = {};
 		const csp = ChangesetProcessor.instanceRegistry[this.pad];
 		if (!data || !data.length || !csp) {
 			return out;
@@ -160,7 +160,7 @@ export default class TrackingService {
 	 */
 	private static async getAndDistributeDatabaseEntries() {
 		const data = await CouchDbService.readView(TrackingService.docScope, "evahelpers", "fetchtrackingdata");
-		const storage: { [key: string]: TrackingData[] } = {};
+		const storage: Record<string, TrackingData[]> = {};
 		Object.keys(TrackingService.instanceRegistry).forEach(padName => {
 			storage[padName] = [];
 		});
@@ -168,7 +168,7 @@ export default class TrackingService {
 		data.rows.forEach(doc => {
 			const content = doc.value as TrackingData;
 
-			if(!authorsList.includes(content.user)){
+			if (!authorsList.includes(content.user)) {
 				AuthorRegistry.put(content.user);
 				authorsList.push(content.user);
 			}

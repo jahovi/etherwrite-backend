@@ -1,8 +1,8 @@
 import {DocumentViewResponse} from "nano";
 import couchDbService from "../couch/couch-db.service";
-import AuthorRegistry from "../../author-registry";
+import AuthorRegistry from "../authors/author-registry";
 import LogService from "../log/log.service";
-import {PadGroupedFormat} from "./pad-grouped-format.interface";
+import {PadGroupedFormat} from "./pad-grouped-format.type";
 
 /**
  * Class to retrieve data about number of characters by each author and total characters in each pad from the db,
@@ -10,7 +10,7 @@ import {PadGroupedFormat} from "./pad-grouped-format.interface";
  * in the frontend.
  */
 export default class AuthoringRatiosCalculator {
-	private dbConnection;
+	private readonly dbConnection;
 
 	public constructor() {
 		this.dbConnection = couchDbService.getConnection("etherpad");
@@ -20,8 +20,8 @@ export default class AuthoringRatiosCalculator {
 	 * Queries the views defined in authoring-ratios-view.ts to calculate authoring ratios per author and pad,
 	 * and packs the data in a convenient format. An authoring ratio is defined as the number of characters written
 	 * by the user that currently exist in the pad, divided by the total number of characters currently existing in the pad.
-	 * The number is convertet to a percentage and rounded to two decimals.
-	 * @returns Authors and corresponding moodle IDS, ratios and colors grouped by pad
+	 * The number is converted to a percentage and rounded to two decimals.
+	 * @returns Authors and correspondent moodle IDS, ratios and colors grouped by pad
 	 */
 	public async calculateAuthoringRatios() {
 		// Might alter these requests to only return data on a specific pad to increase performance
@@ -53,7 +53,7 @@ export default class AuthoringRatiosCalculator {
 	}
 
 	/**
-	 * Helper function to extract an array of unique padnames
+	 * Helper function to extract an array of unique pad names
 	 * @param tupleFormatArray Pad, Author, Ratio, Color Data in Tuple format
 	 * @returns a set of unique pad names
 	 */

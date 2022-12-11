@@ -1,6 +1,6 @@
-import { ConstructorOf } from "./constructor-of.interface";
+import {ConstructorOf} from "./constructor-of.interface";
 import CouchDbService from "./core/couch/couch-db.service";
-import CS_Subscriber from "./core/changeset-service/cs-subscriber-abstract";
+import AbstractChangesetSubscriber from "./core/changeset-service/abstract-changeset-subscriber";
 import ChangesetProcessor from "./core/changeset-service/changeset-processor";
 import subscribers from "./core/changeset-service/subscribers";
 import logService from "./core/log/log.service";
@@ -17,9 +17,9 @@ export default class PadRegistry {
 	private static ignoreListLength = 0;
 
 	/**Call this at startup to initialise the registry.
-	 * Later calls make the PadRegsitry look for newly
+	 * Later calls make the PadRegistry look for newly
 	 * created pads in the database.
-	 */	
+	 */
 	public static async initAndUpdate() {
 		PadRegistry.initIgnoreList();
 		const timestamp = Date.now();
@@ -41,7 +41,7 @@ export default class PadRegistry {
 				infoMarker += 1;
 
 				// create instances of all subclasses of CS_Subscriber
-				(subscribers as ConstructorOf<CS_Subscriber>[]).forEach( subscriber => new subscriber(padName));
+				(subscribers as ConstructorOf<AbstractChangesetSubscriber>[]).forEach(subscriber => new subscriber(padName));
 			}
 			if (padName && !TrackingService.instanceRegistry[padName]) {
 				infoMarker += 2;
@@ -81,7 +81,7 @@ export default class PadRegistry {
 			const list = process.env.PADS_IGNORE.split(",");
 			if (list.length) {
 				PadRegistry.padIgnoreList = list.map(name => name.trim());
-				if(PadRegistry.padIgnoreList.length> this.ignoreListLength){
+				if (PadRegistry.padIgnoreList.length > this.ignoreListLength) {
 					logService.info(PadRegistry.name, "IgnoreList: " + PadRegistry.padIgnoreList);
 					this.ignoreListLength = PadRegistry.padIgnoreList.length;
 				}

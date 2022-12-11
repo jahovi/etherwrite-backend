@@ -1,6 +1,6 @@
 import MinimapService from "../minimap-service/minimap-service";
 
-/**Enter names of subclasses of CS_Subscriber here */
+/** Enter names of subclasses of {@link AbstractChangesetSubscriber} here */
 export default [
 	MinimapService,
 ]

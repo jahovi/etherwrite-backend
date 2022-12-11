@@ -3,12 +3,12 @@ import Changeset from "../../changeset/Changeset";
 import CouchDbService from "../couch/couch-db.service";
 import PadInfo from "./padinfo.interface";
 import PadRev from "./pad-rev.interface";
-import AuthorRegistry from "../../author-registry";
+import AuthorRegistry from "../authors/author-registry";
 import logService from "../log/log.service";
-import RevData from "./rev-data-interface";
+import {RevData} from "./rev-data.type";
 
 /**
- * A Service that gathers the changesets and other information in 
+ * A Service that gathers the changesets and other information in
  * regard to a specific pad from the CouchDB.
  * Instances of this class are meant to support subclasses of the
  * CS_Subscriber class. These will be automatically be registered
@@ -18,17 +18,16 @@ import RevData from "./rev-data-interface";
 export default class ChangesetProcessor {
 
 	/**Grants access to every created instance of this class*/
-	public static readonly instanceRegistry: { [padName: string]: ChangesetProcessor } = {};
-	public static readonly unknownAuthor = "-unknown-";
+	public static readonly instanceRegistry: Record<string, ChangesetProcessor> = {};
 
-	/** The minimum timespan in milliseconds, before a check for newer 
+	/** The minimum timespan in milliseconds, before a check for newer
 	data from CouchDB is made*/
 	public static readonly blocksUpdateDelay = Number(process.env.CSP_UPDATE_DELAY) || 5000;
 
 	/** The name of the etherpad, that this instance provides services for*/
 	public readonly padName: string;
 	/** The number of the newest rev dataset, that has been acquired from CouchDB*/
-	public listRevStatus = -1; // 
+	public listRevStatus = -1; //
 
 	/**Contains the most recent version of basic information regarding that etherpad */
 	public padInfo?: PadInfo;
@@ -42,10 +41,10 @@ export default class ChangesetProcessor {
 		to designate a char as colorless  */
 	public blankKey = "";
 	/** Contains the timestamp from the last Changeset that was caused by this author */
-	public lastActivityTimeStamp: { [key: string]: number } = {};
+	public lastActivityTimeStamp: Record<string, number> = {};
 
-	public attrToAuthorMapping: { [key: string]: string } = {};
-	public attrToHeadingMapping: { [key: string]: string } = {};
+	public attrToAuthorMapping: Record<string, string> = {};
+	public attrToHeadingMapping: Record<string, string> = {};
 
 	private docScope = CouchDbService.getConnection("etherpad");
 	private padHead = 0; // indicates the newest pad:[name]:revs:[padHead]
@@ -67,18 +66,20 @@ export default class ChangesetProcessor {
 
 	/**Only called once in the constructor.
 	 */
-	private async initialise() {
-		await this.checkNewInfoInDataBase();
-		await this.getRevs();
-		setInterval(() =>
-			this.prepareUpdate(), ChangesetProcessor.blocksUpdateDelay);
+	private initialise() {
+		this.checkNewInfoInDataBase()
+			.then(() => this.getRevs())
+			.then(() => {
+				setInterval(() =>
+					this.prepareUpdate(), ChangesetProcessor.blocksUpdateDelay);
+			});
 	}
 
 
 	/**
 	 * Call this once on the corresponding instance
-	 * from ChangesetProcessor.instanceRegisty[padName]
-	 * @param instance 
+	 * from ChangesetProcessor.instanceRegistry[padName]
+	 * @param callback The callback function to execute when new revisions are found.
 	 */
 	public subscribe(callback: Function) {
 		this.subscriberCallbacks.push(callback);
@@ -99,7 +100,7 @@ export default class ChangesetProcessor {
 		await this.checkNewInfoInDataBase();
 		await this.getRevs();
 
-		/* Subscribers will receive a callback only if 
+		/* Subscribers will receive a callback only if
 		there is any new Rev-Dataset*/
 		if (this.padHead > this.lastSubscriberRevUpdate) {
 			this.notifySubscribers();
@@ -148,9 +149,9 @@ export default class ChangesetProcessor {
 
 
 	/**This will take care so that all new revs
-	 * we haven´t loaded from the database yet
+	 * we haven't loaded from the database yet
 	 * will be retrieved and saved to
-	 * 'this.revData' under their index number as key.
+	 * 'this.revData' under their index number as the key.
 	 */
 	private async getRevs() {
 		const promises: Promise<void>[] = [];
@@ -170,18 +171,18 @@ export default class ChangesetProcessor {
 		const data = await this.docScope?.get("pad:" + this.padName + ":revs:" + revNumber);
 		const revData = data as PadRev;
 		const cs = Changeset.unpack(revData.value.changeset);
-		this.revData[revNumber] = { cset: cs, author: revData.value.meta.author, timestamp: revData.value.meta.timestamp };
+		this.revData[revNumber] = {cset: cs, author: revData.value.meta.author, timestamp: revData.value.meta.timestamp};
 	}
 
 	/**Transforms the attribs string from
-	 * an op into a list. Should be obtained 
-	 * after performing a Changeset.deserialize operation. 
-	 * 
+	 * an op into a list. Should be obtained
+	 * after performing a {@link Changeset.deserialize} operation.
+	 *
 	 * This method contains an IMPORTANT bugfix. It is
 	 * strongly advised to always use this methode before
 	 * trying to access the numToAttribs-property of padInfo!
-	 * 
-	 * @param attribs 
+	 *
+	 * @param attribs
 	 * @returns a list of attributes
 	 */
 	public attribsToList(attribs: string): string[] {
@@ -190,8 +191,8 @@ export default class ChangesetProcessor {
 		return list;
 	}
 
-	/** The attribs-input data should be obtained 
-	 * after performing a Changeset.deserialize operation
+	/** The attribs-input data should be obtained
+	 * after performing a {@link Changeset.deserialize} operation
 	 *
 	 * @param attribs the attribs string from an op
 	 * @returns the id of the first author attribute found, excluding the blank author.
@@ -213,9 +214,9 @@ export default class ChangesetProcessor {
 		return out;
 	}
 
-	/**The attribs-input data should be obtained 
-	 * after performing a Changeset.deserialize operation
-	 * 
+	/** The attribs-input data should be obtained
+	 * after performing a {@link Changeset.deserialize} operation
+	 *
 	 * @param attribs the attribs string from an op
 	 * @returns the attribute key of a heading or ""
 	 */
@@ -237,28 +238,17 @@ export default class ChangesetProcessor {
 	 * @returns data
 	 */
 	public getFromNumToAttrib(key: string, index: number) {
-		if (this.padInfo) {
-			const attrs = this.padInfo.value.pool.numToAttrib;
-			const entry = attrs[key];
-			return entry[index];
+		if (!this.padInfo) {
+			logService.warn(ChangesetProcessor.name + " " + this.padName, "padInfo not initialised");
+			throw new Error(`Pad value for ${key} not found.`);
 		}
-		logService.warn(ChangesetProcessor.name + " " + this.padName, "padInfo not initialised");
-		return "";
+
+		const attrs = this.padInfo.value.pool.numToAttrib;
+		const entry = attrs[key];
+		const value = entry[index];
+		if (value == "") {
+			throw new Error(`Pad value for ${key} not found.`);
+		}
+		return value;
 	}
-
-	/**
-	 *
-	 * @returns author data stored in the padInfo property
-	 */
-	public getAuthorAttribMapping() {
-		const out = [];
-		if (this.padInfo)
-			for (const key in this.authorKeys) {
-				const data = { [key]: this.padInfo.value.pool.numToAttrib[key] };
-				out.push(data);
-
-			}
-		return out;
-	}
-
 }

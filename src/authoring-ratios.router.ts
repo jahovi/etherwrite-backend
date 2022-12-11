@@ -1,7 +1,7 @@
 import {Application, Request, Response} from "express";
 import AuthoringRatiosCalculator from "./core/authoring-ratios-service/authoring-ratios-calculator";
 import Router from "./core/router/router.interface";
-import {PadGroupedFormat} from "./core/authoring-ratios-service/pad-grouped-format.interface";
+import {PadGroupedFormat} from "./core/authoring-ratios-service/pad-grouped-format.type";
 
 /**
  * This endpoint uses an instance of AuthoringRatiosCalculator to calculate and return authoring ratios for each pad.
@@ -61,7 +61,7 @@ export default class AuthoringRatiosRouter implements Router {
  *
  * @param authoringRatios as returned by the calculateAuthoringRatios method of AuthoringRatios calculator
  * @param pad the pad for which to calculate aggregated ratios
- * @param usersMoodleId the moodle Id of the current user
+ * @param usersMoodleId the moodle id of the current user
  * @returns aggregated authoring ratios
  */
 function aggregateRatiosOfOtherUsers(authoringRatios: PadGroupedFormat, pad: string, usersMoodleId: string) {

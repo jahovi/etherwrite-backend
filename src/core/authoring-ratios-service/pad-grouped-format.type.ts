@@ -16,7 +16,10 @@
   ...
 	}
  */
-export interface PadGroupedFormat {
-	[pad: string]: { authors: string[], moodleIDs: string[], ratios: number[], colors: string[] };
-}
+export type PadGroupedFormat = Record<string, {
+	authors: string[];
+	moodleIDs: string[];
+	ratios: number[];
+	colors: string[];
+}>;
 

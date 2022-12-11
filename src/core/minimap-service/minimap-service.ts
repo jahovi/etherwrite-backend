@@ -1,28 +1,32 @@
-import CSRaw from "../changeset-service/csraw-interface";
-import { MiniMapDataUnit } from "./mini-map-data-unit.type";
+import CSRaw from "../changeset-service/csraw.interface";
+import {MiniMapDataUnit} from "./mini-map-data-unit.type";
 import MinimapList from "./minimap-list";
-import Op from "../changeset-service/op-interface";
-import Changeset from "../../changeset/Changeset";
-import CS_Subscriber from "../changeset-service/cs-subscriber-abstract";
+import Changeset, {Op} from "../../changeset/Changeset";
+import AbstractChangesetSubscriber from "../changeset-service/abstract-changeset-subscriber";
 
-export default class MinimapService extends CS_Subscriber {
-	/**Allows access to instances of this class, for example
+export default class MinimapService extends AbstractChangesetSubscriber {
+	/**
+	 * Allows access to instances of this class, for example
 	 * when a router wants to pass the generated data to the frontend.
 	 */
-	public static instances: { [padName: string]: MinimapService } = {};
-	/**Contains the data  meant to be sent to the minimap. 
+	public static instances: Record<string, MinimapService> = {};
+	/**
+	 * Contains the data  meant to be sent to the minimap.
 	 */
 	public minimapBlocklist: MiniMapDataUnit[] = [];
 	private list: MinimapList;
 	private listRevStatus = -1;
 	private authorCount = 0;
-	/** counter for _possible_ abuse cases per author
-	 NOTE: It cannot be determined here whether an
-	 author has actually gained an advantage at the
-	 expense of other users. It´s just as possible that
-	the number of characters counted here where already
-	previously his own*/
-	public authorUNDOAnomalyCounter: { [key: string]: number } = {};
+
+	/**
+	 * counter for _possible_ abuse cases per author
+	 * NOTE: It cannot be determined here whether an
+	 * author has actually gained an advantage at the
+	 * expense of other users. It´s just as possible that
+	 * the number of characters counted here where already
+	 * previously his own
+	 */
+	public authorUNDOAnomalyCounter: Record<string, number> = {};
 
 
 	constructor(padName: string) {
@@ -43,7 +47,6 @@ export default class MinimapService extends CS_Subscriber {
 				}
 			})
 		}
-		
 	}
 
 
@@ -53,12 +56,10 @@ export default class MinimapService extends CS_Subscriber {
 	 */
 	private buildList(): void {
 		// init must have completed
-		// type CSRaw = { oldLen: number, newLen: number, ops: string, charBank: string };
 
 		// this type matches the output of the Changeset package below
-		// type Op = { opcode: string, chars: number, lines: number, attribs: string }
 
-		// we want to build the list from the newest rev that we haven´t processed yet.
+		// we want to build the list from the newest rev that we haven't processed yet.
 		let nextRev = this.listRevStatus + 1;
 		while (this.dataSource.revData[nextRev]) {
 			this.list.setToHead();
@@ -66,7 +67,7 @@ export default class MinimapService extends CS_Subscriber {
 			const currentRevData = this.dataSource.revData[nextRev];
 			// bring the data in a more comfortable shape.
 			// ops may contain zero or more operations
-			const ops = Changeset.deserializeOps(currentRevData.cset.ops);
+			const ops: Generator<Op> = Changeset.deserializeOps(currentRevData.cset.ops);
 
 			// pick up the first operation in ops
 			let op = ops.next();
@@ -80,7 +81,7 @@ export default class MinimapService extends CS_Subscriber {
 
 			while (op.value) {
 				// op.value contains something, therefore we are evaluating it
-				const currentOp = op.value as Op;
+				const currentOp = op.value;
 				switch (currentOp.opcode) {
 
 				// we need to insert one or more characters
@@ -104,9 +105,9 @@ export default class MinimapService extends CS_Subscriber {
 			// this revs-dataset is finished. Move to the next one...
 			nextRev++;
 		}
-		/* 	'this.revData[nextRev]' didn´t exist and
-				caused the loop to end.
-				Therefore the last one before it must be
+		/* 	'this.revData[nextRev]' didn't exist and
+				caused the loop to end,
+				therefore the last one before it must be
 				placed in the attribute */
 		this.listRevStatus = nextRev - 1;
 	}
@@ -118,10 +119,7 @@ export default class MinimapService extends CS_Subscriber {
 			// trying to find author in attribs
 			const authorKey = this.dataSource.extractAuthorKeyFromAttribs(currentOp.attribs);
 			author = this.dataSource.getFromNumToAttrib(authorKey, 1);
-			if (author == "") {
-				throw new Error();
-			}
-		} catch {
+		} catch (e) {
 			// else use author data from revdata
 			author = this.dataSource.revData[currentRev].author;
 
@@ -140,7 +138,7 @@ export default class MinimapService extends CS_Subscriber {
 
 		for (let i = 0; i < currentOp.chars; i++) {
 			const char = remainingCharbank.shift();
-			this.list.insertAfterCurrentAndMoveCurrent(char as string, author, { ignoreColor: applyIgnoreColor, headingStart: headingType });
+			this.list.insertAfterCurrentAndMoveCurrent(char as string, author, {ignoreColor: applyIgnoreColor, headingStart: headingType});
 			// remainingCharbank = remainingCharbank.substring(1, remainingCharbank.length);
 		}
 		return remainingCharbank;
@@ -155,7 +153,7 @@ export default class MinimapService extends CS_Subscriber {
 			// indicate that the "Autorenfarben zurücksetzen"
 			// function was applied
 			for (let i = 0; i < currentOp.chars; i++) {
-				this.list.changeAttributesOfNextChar({ ignoreColor: ignoreColors, headingStart: headingType });
+				this.list.changeAttributesOfNextChar({ignoreColor: ignoreColors, headingStart: headingType});
 			}
 		} else {
 			// normal movement
@@ -176,7 +174,6 @@ export default class MinimapService extends CS_Subscriber {
 	}
 
 
-
 	/**
 	 * @returns the newest block list currently available
 	 *
@@ -185,7 +182,7 @@ export default class MinimapService extends CS_Subscriber {
 	 * amount of time has passed since the current block list has
 	 * been created.
 	 *
-	 * Clients are encouraged to continously call for a new list
+	 * Clients are encouraged to continuously call for a new list
 	 * every 3 to 5 seconds.
 	 */
 
@@ -206,13 +203,13 @@ export default class MinimapService extends CS_Subscriber {
 		let counter = 0; // the amount of characters in the current block
 		let lineBreaks: number[] = []; // the relative indices of eventually found linebreaks
 		let headingStart: number[] = [];
-		let headingTypes: { [key: number]: string } = {};
+		let headingTypes: Record<number, string> = {};
 		let runner = this.list.head.next;
 		while (runner.next) {
 			// stops after the last node before tail
 
 			if (runner.author == currentAuthor && runner.meta.ignoreColor == blockIgnoreColors) {
-				// the author and/or ignoreColor hasn´t changed therefore the
+				// the author and/or ignoreColor hasn't changed therefore the
 				// current block is not to be closed yet....
 
 				if (runner.meta.headingStart) {
@@ -232,18 +229,8 @@ export default class MinimapService extends CS_Subscriber {
 				the previous block to the list and reinitialise
 				our variables.
 				*/
-				const completedBlock: MiniMapDataUnit = { author: currentAuthor, blockLength: counter };
-				if (blockIgnoreColors)
-					completedBlock.ignoreColor = true;
-				if (lineBreaks.length) {
-					completedBlock.lineBreakIndices = lineBreaks;
-				}
-
-				if (headingStart.length) {
-					completedBlock.headingStartIndices = headingStart;
-					completedBlock.headingTypes = headingTypes;
-				}
-
+				const completedBlock: MiniMapDataUnit = {author: currentAuthor, blockLength: counter};
+				this.setBlockParameters(completedBlock, blockIgnoreColors, lineBreaks, headingStart, headingTypes);
 				outList.push(completedBlock);
 				currentAuthor = runner.author;
 				blockIgnoreColors = runner.meta.ignoreColor;
@@ -267,18 +254,31 @@ export default class MinimapService extends CS_Subscriber {
 		}
 
 		// need to close the final block. The tail is never part of any block.
-		const completedBlock: MiniMapDataUnit = { author: currentAuthor, blockLength: counter };
-		if (blockIgnoreColors)
-			completedBlock.ignoreColor = true;
-		if (lineBreaks.length) {
-			completedBlock.lineBreakIndices = lineBreaks;
-		}
-
-		if (headingStart.length) {
-			completedBlock.headingStartIndices = headingStart;
-			completedBlock.headingTypes = headingTypes;
-		}
+		const completedBlock: MiniMapDataUnit = {author: currentAuthor, blockLength: counter};
+		this.setBlockParameters(completedBlock, blockIgnoreColors, lineBreaks, headingStart, headingTypes);
 		outList.push(completedBlock);
 		return outList;
 	}
+
+	/**
+	 * Sets the parameters of a given block based on the data.
+	 * @param block The block to set parameters of.
+	 * @param blockIgnoreColors Determines if colors should be ignored.
+	 * @param lineBreaks The tracked line breaks.
+	 * @param headingStart The tracked headings.
+	 * @param headingTypes Types of occurred headings.
+	 */
+	private setBlockParameters(block: MiniMapDataUnit, blockIgnoreColors: boolean, lineBreaks: number[], headingStart: number[], headingTypes: Record<number, string>): void {
+		if (blockIgnoreColors)
+			block.ignoreColor = true;
+		if (lineBreaks.length) {
+			block.lineBreakIndices = lineBreaks;
+		}
+
+		if (headingStart.length) {
+			block.headingStartIndices = headingStart;
+			block.headingTypes = headingTypes;
+		}
+	}
+
 }
