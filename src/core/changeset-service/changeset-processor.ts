@@ -33,7 +33,7 @@ export default class ChangesetProcessor {
 	public padInfo?: PadInfo;
 
 	/**Contains all known changesets, that could be retrieved from the database */
-	public revData: RevData = {};
+	public revData: Record<number, RevData> = {};
 
 	/** The keys of authors in the numToAttrib of the pad */
 	public authorKeys: string[] = [];

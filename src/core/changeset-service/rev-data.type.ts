@@ -1,7 +1,7 @@
 import Changeset from "../../changeset/Changeset";
 
-export type RevData = Record<number, {
+export interface RevData {
 	cset: Changeset.Changeset;
 	author: string;
 	timestamp: number;
-}>;
+}
