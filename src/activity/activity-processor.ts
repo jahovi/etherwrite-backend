@@ -33,8 +33,16 @@ export default class ActivityProcessor extends AbstractChangesetSubscriber {
 			while (op.value) {
 				// op.value contains something, therefore we are evaluating it
 				const currentOp = op.value;
-				const authorKey: string = this.dataSource.extractAuthorKeyFromAttribs(currentOp.attribs);
-				const author: string = this.dataSource.getFromNumToAttrib(authorKey, 1);
+				let author: string;
+
+				try {
+					const authorKey: string = this.dataSource.extractAuthorKeyFromAttribs(currentOp.attribs);
+					author = this.dataSource.getFromNumToAttrib(authorKey, 1);
+				} catch (e) {
+					// else use author data from revdata
+					author = currentRevData.author;
+				}
+
 				let newEntry: ActivityDataEntry | undefined = undefined;
 
 				switch (currentOp.opcode) {
