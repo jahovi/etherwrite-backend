@@ -27,8 +27,9 @@ export default abstract class AbstractChangesetSubscriber {
 
 	protected constructor(padName: string) {
 		this.dataSource = ChangesetService.instanceRegistry[padName];
-		if (!this.dataSource)
+		if (!this.dataSource) {
 			logService.error(AbstractChangesetSubscriber.name, "failed to connect to CSP for " + padName);
+		}
 		this.padName = padName;
 		this.connect();
 	}

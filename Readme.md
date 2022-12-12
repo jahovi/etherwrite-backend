@@ -41,9 +41,10 @@ Execute request `GET localhost:8083/dbtest?dbname=<your db name>` to test databa
 
 ## Endpoints
 
-### /getAuthorInfo
+### /minimap/authorInfo
 
-Execute request `GET localhost:8083/getAuthorInfo` to receive an object containing information about all authors EVA currently knows. Be sure to request this regularly to be informed about eventual color changes by the authors. 
+Execute request `GET localhost:8083/minimap/authorInfo` to receive an object containing information about all authors EVA currently 
+knows. Be sure to request this regularly to be informed about eventual color changes by the authors. 
 
 ```js
 {
@@ -61,9 +62,9 @@ color: -- the color that is associated with this author according to the databas
 mapper2author -- delivers the 'XX' from the mapper2author:XX files in couchdb that is assigned to the etherpad id of this author, IF there
 is such a file in the couchdb for this etherpad id.
 
-### /getBlockInfo
+### /minimap/blockInfo
 
-Execute request `GET localhost:8083/getBlockInfo?padName=<your pad name>` to receive a sequence of data representing the blocks of text. The beginning of a new block indicates that the author and/or the ignoreColor-flag has changed compared to the previous block. Each object of the sequence has this form:
+Execute request `GET localhost:8083/minimap/blockInfo?padName=<your pad name>` to receive a sequence of data representing the blocks of text. The beginning of a new block indicates that the author and/or the ignoreColor-flag has changed compared to the previous block. Each object of the sequence has this form:
 
 ````js
 {
@@ -138,9 +139,9 @@ The functionality is implemented in the following files:
 - src/authoring-ratios-service/authoring-ratios-calculator.ts
 - src/core/couch/documents/authoring-ratios-view.ts
 
-### /getScrollPos
+### /minimap/scrollPositions
 
-Execute request `GET localhost:8083/getScrollPos?padName=<your pad name>` to receive information gathered 
+Execute request `GET localhost:8083/minimap/scrollPositions?padName=<your pad name>` to receive information gathered 
 by the ep-tracking module about the latest scroll positions of users. Will only contain data regarding 
 authors that can be assumed to currently have openend that pad. I.e. users, for which ep-tracking has a 
 disconnect event that is newer than the latest connect event or the latest scroll event, will be excluded.  
@@ -186,4 +187,48 @@ The structure of an EtherVizColumnItem:
 	lowerLeft:number,
 	lowerRight?:number,
 }
+```
+
+### /activity/activities
+
+`GET localhost:8083/activity/activities?padName=<your pad name>` will return the activities that took place in the requested pad, i.e. 
+the number of changesets. They will be aggregated by hour, or, if the entire project already lasted longer than 3 days, by day.
+
+The returned data is structured as follows:
+```js
+[
+	{
+		timeStamp: string, // Readable date/datetime string
+		authorToActivities: {
+			[authorMoodleId: string]: number,
+        }, 
+	}
+]
+```
+
+### /activity/operations
+
+`GET localhost:8083/activity/activities?padName=<your pad name>` will return the operations that took place in the requested pad, i.e. 
+the number of changesets distinguished by the type of operation. Possible operations are: 
+- WRITE (adding text)
+- EDIT (formatting already written text)
+- DELETE (removing text)
+- PASTE (pasting a number of characters)
+They will be aggregated by hour, or, if the entire project already lasted longer than 3 days, by day.
+
+The returned data is structured as follows:
+```js
+[
+	{
+		timeStamp: string, // Readable date/datetime string
+		authorToOperations: {
+			[authorMoodleId: string]: {
+				WRITE?: number,
+				EDIT?: number,
+				DELETE?: number,
+				PASTE?: number,
+            },
+        }, 
+	}
+]
 ```
