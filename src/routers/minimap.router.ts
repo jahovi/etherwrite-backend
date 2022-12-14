@@ -1,10 +1,10 @@
-import Router from "./core/router/router.interface";
+import Router from "../core/router/router.interface";
 import {Application, Request, Response} from "express";
-import logService from "./core/log/log.service";
-import PadRegistry from "./pads";
-import AuthorRegistry from "./core/authors/author-registry";
-import TrackingService from "./core/tracking-service/tracking-service";
-import MinimapService from "./core/minimap-service/minimap-service";
+import logService from "../core/log/log.service";
+import PadRegistry from "../pads";
+import AuthorRegistry from "../core/authors/author-registry";
+import TrackingService from "../core/tracking-service/tracking-service";
+import MinimapService from "../minimap-service/minimap-service";
 
 
 export default class MinimapRouter implements Router {

@@ -1,7 +1,7 @@
 import {ConstructorOf} from "./constructor-of.interface";
 import CouchDbService from "./core/couch/couch-db.service";
 import AbstractChangesetSubscriber from "./core/changeset-service/abstract-changeset-subscriber";
-import ChangesetProcessor from "./core/changeset-service/changeset-processor";
+import ChangesetService from "./core/changeset-service/changeset-service";
 import subscribers from "./core/changeset-service/subscribers";
 import logService from "./core/log/log.service";
 import TrackingService from "./core/tracking-service/tracking-service";
@@ -35,33 +35,14 @@ export default class PadRegistry {
 
 
 		PadRegistry.padNames.forEach((padName) => {
-			let infoMarker = 0;
-			if (padName && !ChangesetProcessor.instanceRegistry[padName]) {
-				new ChangesetProcessor(padName.toString());
-				infoMarker += 1;
-
-				// create instances of all subclasses of CS_Subscriber
+			if (padName && !ChangesetService.instanceRegistry[padName]) {
+				new ChangesetService(padName.toString());
+				// create instances of all subclasses of AbstractChangesetSubscriber
 				(subscribers as ConstructorOf<AbstractChangesetSubscriber>[]).forEach(subscriber => new subscriber(padName));
+				logService.info(PadRegistry.name,"Created Services for '"+padName+"'");
 			}
 			if (padName && !TrackingService.instanceRegistry[padName]) {
-				infoMarker += 2;
 				new TrackingService(padName);
-			}
-
-			// create fitting info-output
-			switch (infoMarker) {
-			case (1): {
-				logService.info(PadRegistry.name, "Created ChangesetProcessor for '" + padName + "'");
-				break;
-			}
-			case (2): {
-				logService.info(PadRegistry.name, "Created TrackingService for '" + padName + "'");
-				break;
-			}
-			case (3): {
-				logService.info(PadRegistry.name, "Created ChangesetProcessor and TrackingService for '" + padName + "'");
-				break;
-			}
 			}
 		});
 	}

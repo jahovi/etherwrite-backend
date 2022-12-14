@@ -1,11 +1,11 @@
 import logService from "../log/log.service";
-import ChangesetProcessor from "./changeset-processor";
+import ChangesetService from "./changeset-service";
 
 
 /**
  * Services that want to evaluate revision data from pads
  * should inherit from this class in order to get access
- * to the ChangesetProcessor instance.
+ * to the ChangesetService instance.
  *
  * IMPORTANT: Instances of all subclasses MUST add their class
  * names to the list in subscribers.ts in order to be instantiated
@@ -15,18 +15,18 @@ export default abstract class AbstractChangesetSubscriber {
 
 	/**
 	 * This object provides access to the non-private methods
-	 * and properties of the ChangesetProcessor instance.
+	 * and properties of the ChangesetService instance.
 	 *
-	 * IMPORTANT: Instances of CS_Subscriber are
+	 * IMPORTANT: Instances of AbstractChangesetSubscriber are
 	 * NOT ALLOWED to perform write operations on
-	 * properties of ChangesetProcessor
+	 * properties of ChangesetService
 	 *
 	 */
-	public readonly dataSource: ChangesetProcessor;
+	public readonly dataSource: ChangesetService;
 	public readonly padName: string
 
 	protected constructor(padName: string) {
-		this.dataSource = ChangesetProcessor.instanceRegistry[padName];
+		this.dataSource = ChangesetService.instanceRegistry[padName];
 		if (!this.dataSource)
 			logService.error(AbstractChangesetSubscriber.name, "failed to connect to CSP for " + padName);
 		this.padName = padName;
@@ -42,7 +42,7 @@ export default abstract class AbstractChangesetSubscriber {
 	 * be filled with instructions in response to
 	 * newly arrived revision-data for this pad.
 	 *
-	 * The ChangesetProcessor will only call this,
+	 * The ChangesetService will only call this,
 	 * if there are any new revision datasets since
 	 * the last call.
 	 */

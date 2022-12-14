@@ -11,14 +11,14 @@ import {RevData} from "./rev-data.type";
  * A Service that gathers the changesets and other information in
  * regard to a specific pad from the CouchDB.
  * Instances of this class are meant to support subclasses of the
- * CS_Subscriber class. These will be automatically be registered
- * as subscribers to ChangesetProcessor and will receive a callback
+ * AbstractChangesetSubscriber class. These will be automatically be registered
+ * as subscribers to ChangesetService and will receive a callback
  * every time when new revision data was found in CouchDB.
  */
-export default class ChangesetProcessor {
+export default class ChangesetService {
 
 	/**Grants access to every created instance of this class*/
-	public static readonly instanceRegistry: Record<string, ChangesetProcessor> = {};
+	public static readonly instanceRegistry: Record<string, ChangesetService> = {};
 
 	/** The minimum timespan in milliseconds, before a check for newer
 	data from CouchDB is made*/
@@ -58,8 +58,8 @@ export default class ChangesetProcessor {
 	 */
 	public constructor(padName: string) {
 		this.padName = padName;
-		if (!ChangesetProcessor.instanceRegistry[padName]) {
-			ChangesetProcessor.instanceRegistry[padName] = this;
+		if (!ChangesetService.instanceRegistry[padName]) {
+			ChangesetService.instanceRegistry[padName] = this;
 		}
 		this.initialise();
 	}
@@ -71,14 +71,14 @@ export default class ChangesetProcessor {
 			.then(() => this.getRevs())
 			.then(() => {
 				setInterval(() =>
-					this.prepareUpdate(), ChangesetProcessor.blocksUpdateDelay);
+					this.prepareUpdate(), ChangesetService.blocksUpdateDelay);
 			});
 	}
 
 
 	/**
 	 * Call this once on the corresponding instance
-	 * from ChangesetProcessor.instanceRegistry[padName]
+	 * from ChangesetService.instanceRegistry[padName]
 	 * @param callback The callback function to execute when new revisions are found.
 	 */
 	public subscribe(callback: Function) {
@@ -239,7 +239,7 @@ export default class ChangesetProcessor {
 	 */
 	public getFromNumToAttrib(key: string, index: number) {
 		if (!this.padInfo) {
-			logService.warn(ChangesetProcessor.name + " " + this.padName, "padInfo not initialised");
+			logService.warn(ChangesetService.name + " " + this.padName, "padInfo not initialised");
 			throw new Error(`Pad value for ${key} not found.`);
 		}
 

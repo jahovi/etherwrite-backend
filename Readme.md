@@ -140,7 +140,7 @@ The functionality is implemented in the following files:
 
 ### /getScrollPos
 
-Execute request `GET localhost:8083/getBlockInfo?padName=<your pad name>` to receive information gathered 
+Execute request `GET localhost:8083/getScrollPos?padName=<your pad name>` to receive information gathered 
 by the ep-tracking module about the latest scroll positions of users. Will only contain data regarding 
 authors that can be assumed to currently have openend that pad. I.e. users, for which ep-tracking has a 
 disconnect event that is newer than the latest connect event or the latest scroll event, will be excluded.  
@@ -154,5 +154,36 @@ The data is structured as follows:
 		topIndex: number,
 		bottomIndex?: number,
 	}
+}
+```
+
+### /getEtherVizData
+
+Execute request `GET localhost:8083/getEtherVizData?padName=<your pad name>` to receive the data for
+generating an EtherViz chart for the specified pad.  
+The data is structured as follows: 
+
+```js
+{
+		dateTime:string,
+		/**A rectangle describes a status block */
+		rectangles: EtherVizColumnItem[], 
+		/**A parallelogram describes the transitions from
+		 * the characters that are part of the rectangles
+		 * block to the status block after the cuurent one. 
+		 */
+		parallelograms?: EtherVizColumnItem[] 
+	}
+```
+
+The structure of an EtherVizColumnItem:  
+```js
+{
+	authorId:string,
+	authorColor:string,
+	upperLeft: number,
+	upperRight?:number,
+	lowerLeft:number,
+	lowerRight?:number,
 }
 ```

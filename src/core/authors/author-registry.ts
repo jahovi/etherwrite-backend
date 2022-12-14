@@ -54,7 +54,7 @@ export default class AuthorRegistry {
 				if (data) {
 					const authorData = data as AuthorData;
 					AuthorRegistry.knownAuthors[authorId].epalias = authorData.value.name;
-					AuthorRegistry.knownAuthors[authorId].color = authorData.value.colorId;
+					AuthorRegistry.knownAuthors[authorId].color = String(authorData.value.colorId);
 					if (AuthorRegistry.knownAuthors[authorId].mapper2author == "") {
 						this.fetchMapperData();
 					}

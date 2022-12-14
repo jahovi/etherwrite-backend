@@ -1,7 +1,7 @@
 import {DocumentViewResponse} from "nano";
-import couchDbService from "../couch/couch-db.service";
-import AuthorRegistry from "../authors/author-registry";
-import LogService from "../log/log.service";
+import couchDbService from "../core/couch/couch-db.service";
+import AuthorRegistry from "../core/authors/author-registry";
+import LogService from "../core/log/log.service";
 import {PadGroupedFormat} from "./pad-grouped-format.type";
 
 /**

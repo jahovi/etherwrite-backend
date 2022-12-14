@@ -1,7 +1,7 @@
 import {Application, Request, Response} from "express";
-import AuthoringRatiosCalculator from "./core/authoring-ratios-service/authoring-ratios-calculator";
-import Router from "./core/router/router.interface";
-import {PadGroupedFormat} from "./core/authoring-ratios-service/pad-grouped-format.type";
+import AuthoringRatiosCalculator from "../authoring-ratios-service/authoring-ratios-calculator";
+import Router from "../core/router/router.interface";
+import {PadGroupedFormat} from "../authoring-ratios-service/pad-grouped-format.type";
 
 /**
  * This endpoint uses an instance of AuthoringRatiosCalculator to calculate and return authoring ratios for each pad.

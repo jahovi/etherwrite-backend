@@ -1,4 +1,4 @@
-import BasicList from "../changeset-service/basic-list";
+import BasicList from "../core/changeset-service/basic-list";
 import MinimapMeta from "./minimap-meta";
 
 /**

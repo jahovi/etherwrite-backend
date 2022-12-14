@@ -1,5 +1,5 @@
 import CouchDbService from "../couch/couch-db.service";
-import ChangesetProcessor from "../changeset-service/changeset-processor";
+import ChangesetService from "../changeset-service/changeset-service";
 import {MiniMapScrollPos} from "./minimapscrollpos.type";
 import {StructuredTrackingData} from "./structured-tracking-data-type";
 import {TrackingData} from "./trackingdata-type";
@@ -93,7 +93,7 @@ export default class TrackingService {
 	private getStructuredPadData() {
 		const data = this.padData;
 		const out: Record<string, StructuredTrackingData> = {};
-		const csp = ChangesetProcessor.instanceRegistry[this.pad];
+		const csp = ChangesetService.instanceRegistry[this.pad];
 		if (!data || !data.length || !csp) {
 			return out;
 		}

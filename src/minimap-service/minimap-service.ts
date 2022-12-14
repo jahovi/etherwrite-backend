@@ -1,8 +1,8 @@
-import CSRaw from "../changeset-service/csraw.interface";
+import CSRaw from "../core/changeset-service/csraw.interface";
 import {MiniMapDataUnit} from "./mini-map-data-unit.type";
 import MinimapList from "./minimap-list";
-import Changeset, {Op} from "../../changeset/Changeset";
-import AbstractChangesetSubscriber from "../changeset-service/abstract-changeset-subscriber";
+import Changeset, {Op} from "../changeset/Changeset";
+import AbstractChangesetSubscriber from "../core/changeset-service/abstract-changeset-subscriber";
 
 export default class MinimapService extends AbstractChangesetSubscriber {
 	/**

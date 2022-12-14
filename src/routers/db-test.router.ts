@@ -1,7 +1,7 @@
 import {Application, Request, Response} from "express";
-import Router from "./core/router/router.interface";
-import couchDbService from "./core/couch/couch-db.service";
-import logService from "./core/log/log.service";
+import Router from "../core/router/router.interface";
+import couchDbService from "../core/couch/couch-db.service";
+import logService from "../core/log/log.service";
 
 export default class DBTestRouter implements Router {
 

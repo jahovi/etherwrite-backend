@@ -1,8 +1,8 @@
 import {Application, Request, Response} from "express";
-import Router from "./core/router/router.interface";
-import couchDbService from "./core/couch/couch-db.service";
+import Router from "../core/router/router.interface";
+import couchDbService from "../core/couch/couch-db.service";
 import {DocumentScope, DocumentViewResponse} from "nano";
-import {MoodleUser} from "./core/middleware/moodle-user.middleware";
+import {MoodleUser} from "../core/middleware/moodle-user.middleware";
 
 export default class EtherpadRouter implements Router {
 	private ROUTE = "/etherpad";
