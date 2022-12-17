@@ -1,28 +1,28 @@
 import AbstractChangesetSubscriber from "../core/changeset-service/abstract-changeset-subscriber";
-import Changeset, { Op } from "../changeset/Changeset";
+import Changeset, {Op} from "../changeset/Changeset";
 import CSRaw from "../core/changeset-service/csraw.interface";
-import { EtherVizColumn, EtherVizColumnItem } from "./etherviz-interfaces";
+import {EtherVizColumn, EtherVizColumnItem} from "./etherviz-interfaces";
 import AuthorRegistry from "../core/authors/author-registry";
-import EtherVizList, { EtherVizMeta } from "./etherviz-list";
-import { BasicListNode } from "../core/changeset-service/basic-list";
+import EtherVizList, {EtherVizMeta} from "./etherviz-list";
+import {BasicListNode} from "../core/changeset-service/basic-list";
 
 export default class EtherVizService extends AbstractChangesetSubscriber {
 
 	/**Setting this to 'true' lowers the 'stablePeriod' from one
 	 * hour to one minute and causes some console.log() debug output
 	 * (see the dataSourceCallback method for details)
-	 * 
-	 * Affects the timeStampToDate Method too. 
+	 *
+	 * Affects the timeStampToDate Method too.
 	 */
 	private static debugOutput = false;
 	public static instances: Record<string, EtherVizService> = {};
 
-	/** milliseconds - the time that has to pass without new changesets 
+	/** milliseconds - the time that has to pass without new changesets
 	before a timestamp is eligible as starting point for new status block  */
 	private static stablePeriod = EtherVizService.debugOutput ? 60000 : 3600000; // one minute or one hour
 
 	/**Contains the linked list that is evaluated at the
-	 * chosen stable timestamp moments. 
+	 * chosen stable timestamp moments.
 	 */
 	private list: EtherVizList;
 
@@ -44,8 +44,9 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 	}
 
 	public getEtherVizDataSet() {
-		if (Date.now() > this.dataSetTimeStamp + this.updateDelay)
+		if (Date.now() > this.dataSetTimeStamp + this.updateDelay) {
 			this.buildOutputData();
+		}
 		return this.ethervizDataSet;
 	}
 
@@ -57,8 +58,9 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 		}
 		//debug output
 		if (EtherVizService.debugOutput) {
-			if (Date.now() > this.dataSetTimeStamp + this.updateDelay)
+			if (Date.now() > this.dataSetTimeStamp + this.updateDelay) {
 				this.buildOutputData();
+			}
 			console.log("pad: " + this.padName);
 			this.ethervizDataSet.forEach(columnSet => {
 				console.log(columnSet.dateTime);
@@ -72,7 +74,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 
 
 	/* Searches in the changesets for stable timestamps.
-	A timestamp is considered stable when there were no new 
+	A timestamp is considered stable when there were no new
 	changesets after the current one for at least the timespan
 	that is defined in the 'stablePeriod' attribute */
 	private findStableTimestamps(): void {
@@ -86,19 +88,21 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 		}
 		// the very latest status of the pad will always be used
 		const latestTimeStamp = this.dataSource.revData[this.latestRev].timestamp;
-		if (!this.stableTimestamps.includes(latestTimeStamp))
+		if (!this.stableTimestamps.includes(latestTimeStamp)) {
 			this.stableTimestamps.push(latestTimeStamp);
+		}
 
 		// remove entries as long as maximum is exceeded
-		while (this.stableTimestamps.length > this.maxTimeStamps)
+		while (this.stableTimestamps.length > this.maxTimeStamps) {
 			this.shrinkStableTimestamps();
+		}
 	}
 
 	/**
-	 * Removes an element from stableTimeStamps. 
+	 * Removes an element from stableTimeStamps.
 	 * The removed element lies between two other
 	 * elements that have the lowest distance between
-	 * each other. 
+	 * each other.
 	 */
 	private shrinkStableTimestamps(): void {
 		if (this.stableTimestamps.length < 3) {
@@ -128,27 +132,9 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 	 */
 	static timeStampToDateString(ts: number): string {
 
-		const d = new Date(0);
-		ts = EtherVizService.debugOutput ? ts : ts + EtherVizService.stablePeriod;
-		d.setUTCMilliseconds(ts);
-
-		let day = String(d.getDate() + 1);
-		while (day.length < 2)
-			day = "0" + day;
-		let month = String(d.getMonth() + 1);
-		while (month.length < 2)
-			month = "0" + month;
-		const year = String(d.getFullYear());
-		let hour = String(d.getHours());
-		while (hour.length < 2)
-			hour = "0" + hour;
-		let mins = EtherVizService.debugOutput ? String(d.getMinutes()) : "00";
-		while (mins.length < 2)
-			mins = "0" + mins;
-		return day + "." + month + "." + year + " " + hour + ":" + mins;
+		const d = new Date(EtherVizService.debugOutput ? ts : ts + EtherVizService.stablePeriod);
+		return d.toLocaleString("de");
 	}
-
-
 
 	/**Generates and updates the linked list.
 	 * Must be called every time when new data
@@ -201,7 +187,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 
 			if (this.stableTimestamps.includes(currentRevData.timestamp)) {
 
-				// The current changeset timestamp has been chosen to be 
+				// The current changeset timestamp has been chosen to be
 				// the basis for one of our status blocks
 				this.buildStatusBlock(currentRevData);
 
@@ -214,7 +200,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 
 	/** Generates a status block from the current content of
 	 * the linked list. Will generate a transitional block too,
-	 * if this isn´t the first status block. 
+	 * if this isn´t the first status block.
 	 */
 	private buildStatusBlock(currentRevData: { cset: Changeset.Changeset; author: string; timestamp: number; }): void {
 		const timeStampIndex = this.stableTimestamps.indexOf(currentRevData.timestamp);
@@ -260,7 +246,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 		list.push(currentBlock);
 
 		const dateString = EtherVizService.timeStampToDateString(currentRevData.timestamp);
-		const entry: EtherVizColumn = { dateTime: dateString, rectangles: list };
+		const entry: EtherVizColumn = {dateTime: dateString, rectangles: list};
 
 		this.ethervizDataSet.push(entry);
 
@@ -290,9 +276,9 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 					upperRight: nodeZero.meta[timeStampIndex],
 					lowerRight: nodeZero.meta[timeStampIndex],
 				};
-				const parallograms: EtherVizColumnItem[] = []
+				const parallelograms: EtherVizColumnItem[] = []
 
-				// The offset describes the difference in the position of the 
+				// The offset describes the difference in the position of the
 				// current character in the text in the previous status block
 				// compared to the current status block.
 				// If following characters share the same offset, they will be treated
@@ -304,9 +290,9 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 					const node = commonNodes[i];
 					const nodeLRDiff = (node.meta[timeStampIndex - 1]) - (node.meta[timeStampIndex]);
 					if (node && node.author != currentBlock.authorId || nodeLRDiff != offset) {
-						// close block because the author has changed and/or 
+						// close block because the author has changed and/or
 						// the offset has changed
-						parallograms.push(currentBlock);
+						parallelograms.push(currentBlock);
 						// reinitialise
 						author = node.author;
 						authorRecord = AuthorRegistry.knownAuthors[author];
@@ -327,8 +313,8 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 					}
 				}
 				//close final block
-				parallograms.push(currentBlock);
-				this.ethervizDataSet[timeStampIndex - 1]["parallelograms"] = parallograms;
+				parallelograms.push(currentBlock);
+				this.ethervizDataSet[timeStampIndex - 1]["parallelograms"] = parallelograms;
 			}
 		}
 		this.dataSetTimeStamp = Date.now();

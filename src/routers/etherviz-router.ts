@@ -23,7 +23,7 @@ export default class EtherVizRouter implements Router {
 			await PadRegistry.initAndUpdate();
 			evproc = EtherVizService.instances[padName.toString()];
 		}
-		if(!evproc){
+		if (!evproc) {
 			res.status(404).send([]);
 			return;
 		}
