@@ -14,7 +14,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 	 *
 	 * Affects the timeStampToDate Method too.
 	 */
-	private static debugOutput = true;
+	private static debugOutput = false;
 	public static instances: Record<string, EtherVizService> = {};
 
 	/** milliseconds - the time that has to pass without new changesets
@@ -62,13 +62,13 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 				this.buildOutputData();
 			}
 			console.log("pad: " + this.padName);
-			// this.ethervizDataSet.forEach(columnSet => {
-			// 	console.log(columnSet.dateTime);
-			// 	console.log("rectangles");
-			// 	console.log(columnSet.rectangles);
-			// 	console.log("parallelograms");
-			// 	console.log(columnSet.parallelograms);
-			// });
+			this.ethervizDataSet.forEach(columnSet => {
+				console.log(columnSet.dateTime);
+				console.log("rectangles");
+				console.log(columnSet.rectangles);
+				console.log("parallelograms");
+				console.log(columnSet.parallelograms);
+			});
 			const d = this.getEtherVizDataSet();
 			console.log(d.length);
 		}
