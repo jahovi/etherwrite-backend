@@ -14,7 +14,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 	 *
 	 * Affects the timeStampToDate Method too.
 	 */
-	private static debugOutput = false;
+	private static debugOutput = true;
 	public static instances: Record<string, EtherVizService> = {};
 
 	/** milliseconds - the time that has to pass without new changesets
@@ -30,7 +30,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 	private stableTimestamps: number[] = []
 
 	/* Forces the reduction of starting points for new status blocks */
-	private maxTimeStamps = 12;
+	private maxTimeStamps = Number(process.env.ETHERVIZ_MAX_STATUS_BLOCKS) || 12;
 	private latestRev = -1;
 
 	private ethervizDataSet: EtherVizColumn[] = []
@@ -62,13 +62,15 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 				this.buildOutputData();
 			}
 			console.log("pad: " + this.padName);
-			this.ethervizDataSet.forEach(columnSet => {
-				console.log(columnSet.dateTime);
-				console.log("rectangles");
-				console.log(columnSet.rectangles);
-				console.log("parallelograms");
-				console.log(columnSet.parallelograms);
-			});
+			// this.ethervizDataSet.forEach(columnSet => {
+			// 	console.log(columnSet.dateTime);
+			// 	console.log("rectangles");
+			// 	console.log(columnSet.rectangles);
+			// 	console.log("parallelograms");
+			// 	console.log(columnSet.parallelograms);
+			// });
+			const d = this.getEtherVizDataSet();
+			console.log(d.length);
 		}
 	}
 
@@ -143,7 +145,8 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 	private buildOutputData(): void {
 		// we want to build the list from the newest rev that we haven't processed yet.
 		let nextRev = 0;
-		this.list = new EtherVizList();
+		this.list.eraseAllNodes();
+		this.ethervizDataSet.length = 0;
 		while (this.dataSource.revData[nextRev]) {
 			this.list.setToHead();
 			// we are going through all new revs that we previously pulled from the database
@@ -216,7 +219,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 			authorId: author,
 			authorColor: color,
 			upperLeft: 0,
-			lowerLeft: 0,
+			lowerLeft: -1,
 		};
 		const list = [];
 		while (runner && runner.next) {

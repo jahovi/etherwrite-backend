@@ -13,7 +13,7 @@ export default class EtherVizRouter implements Router {
 	}
 
 	async getData(_req: Request, res: Response): Promise<void> {
-		const padName = _req.query["padName"];
+		const padName: string = _req.query.pad as string;
 		if (!padName) {
 			res.status(400).send("Query parameter \"padName\" is required.");
 			return;

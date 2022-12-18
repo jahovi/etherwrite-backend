@@ -22,11 +22,11 @@ COUCH_DB_PORT=5984
 CSP_UPDATE_DELAY=5000
 
 TRS_UPDATE_DELAY=5000
-
+ETHERVIZ_MAX_STATUS_BLOCKS=12
 PADREG_UPDATE_DELAY=5000
-PADS_IGNORE = 
+PADS_IGNORE= 
 ```
-PADS_IGNORE can be filled with one or more names of pads, separated by commas. These will be ignored by EVA  
+PADS_IGNORE can be filled with one or more names of pads, separated by commas. These will be ignored by EVA Services that are launched by the pad registry. 
 
 ## Structure
 
@@ -159,21 +159,21 @@ The data is structured as follows:
 
 ### /getEtherVizData
 
-Execute request `GET localhost:8083/getEtherVizData?padName=<your pad name>` to receive the data for
+Execute request `GET localhost:8083/getEtherVizData?pad=<your pad name>` to receive the data for
 generating an EtherViz chart for the specified pad.  
 The data is structured as follows: 
 
 ```js
 {
-		dateTime:string,
-		/**A rectangle describes a status block */
-		rectangles: EtherVizColumnItem[], 
-		/**A parallelogram describes the transitions from
-		 * the characters that are part of the rectangles
-		 * block to the status block after the cuurent one. 
-		 */
-		parallelograms?: EtherVizColumnItem[] 
-	}
+	dateTime:string,
+	/**A rectangle describes a status block */
+	rectangles: EtherVizColumnItem[], 
+	/**A parallelogram describes the transitions from
+	 * the characters that are part of the rectangles
+	 * block to the status block after the cuurent one. 
+	 */
+	parallelograms?: EtherVizColumnItem[] 
+}
 ```
 
 The structure of an EtherVizColumnItem:  
