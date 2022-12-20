@@ -61,6 +61,10 @@ class ActivityService {
 		const earliest: AggregatedEntry<TYPE> = list[0];
 		const latest: AggregatedEntry<TYPE> = list[list.length - 1];
 
+		if (!earliest || !latest) {
+			return list;
+		}
+
 		const result: TYPE[] = [];
 
 		const date = new Date(earliest.timestamp.getTime());
