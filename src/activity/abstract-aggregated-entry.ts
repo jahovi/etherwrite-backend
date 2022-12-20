@@ -1,5 +1,6 @@
 import {ActivityDataEntry} from "./activity-data-entry.interface";
 import {MoodleUser} from "../core/middleware/moodle-user.middleware";
+import {DateService} from "../core/util/date.service";
 
 export abstract class AggregatedEntry<TYPE> {
 	public timestamp: Date;
@@ -25,7 +26,7 @@ export abstract class AggregatedEntry<TYPE> {
 	 * @param includeHours
 	 */
 	public toJSON(user: MoodleUser, includeHours = false) {
-		const timestamp = includeHours ? this.timestamp.toLocaleString("de") : this.timestamp.toLocaleDateString("de")
+		const timestamp = includeHours ? DateService.formatDateTime(this.timestamp) : DateService.formatDate(this.timestamp);
 		return {
 			timestamp: timestamp,
 		}

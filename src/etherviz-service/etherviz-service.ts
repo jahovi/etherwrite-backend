@@ -5,6 +5,7 @@ import {EtherVizColumn, EtherVizColumnItem} from "./etherviz-interfaces";
 import AuthorRegistry from "../core/authors/author-registry";
 import EtherVizList, {EtherVizMeta} from "./etherviz-list";
 import {BasicListNode} from "../core/changeset-service/basic-list";
+import {DateService} from "../core/util/date.service";
 
 export default class EtherVizService extends AbstractChangesetSubscriber {
 
@@ -133,9 +134,8 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 	 * @returns a date-time string
 	 */
 	static timeStampToDateString(ts: number): string {
-
 		const d = new Date(EtherVizService.debugOutput ? ts : ts + EtherVizService.stablePeriod);
-		return d.toLocaleString("de");
+		return DateService.formatDateTime(d);
 	}
 
 	/**Generates and updates the linked list.
