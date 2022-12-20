@@ -56,7 +56,7 @@ export class ActivityRouter implements Router {
 	 */
 	private async getOperationListOfPad(req: Request, res: Response) {
 		const user: MoodleUser = res.locals.user;
-		const padName: string = req.query.padName as string;
+		const padName: string = req.params.padName as string;
 
 		if (!padName) {
 			throw new Error("Query parameter \"padName\" is required.");
