@@ -18,9 +18,14 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 	private static debugOutput = false;
 	public static instances: Record<string, EtherVizService> = {};
 
+	private static milSecInHour = 1000 * 60 * 60;
+
+	/**Suspends the mechanism to round timeStamps to full hours */
+	private static dontRoundToFullHours = process.env.ETHERVIZ_DONT_ROUND_TO_FULL_HOURS == "true";
+
 	/** milliseconds - the time that has to pass without new changesets
 	before a timestamp is eligible as starting point for new status block  */
-	private static stablePeriod = EtherVizService.debugOutput ? 60000 : 3600000; // one minute or one hour
+	private static stablePeriod = EtherVizService.debugOutput ? 60000 : EtherVizService.milSecInHour; // one minute or one hour
 
 	/**Contains the linked list that is evaluated at the
 	 * chosen stable timestamp moments.
@@ -61,6 +66,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 		if (EtherVizService.debugOutput) {
 			if (Date.now() > this.dataSetTimeStamp + this.updateDelay) {
 				this.buildOutputData();
+				this.getEtherVizDataSet();
 			}
 			console.log("pad: " + this.padName);
 			this.ethervizDataSet.forEach(columnSet => {
@@ -128,14 +134,21 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 	}
 
 	/**
-	 * Generates a date-time string of the format
-	 * DD.MM.YYYY hh.mm
+	 * Will return a DateTimeString formatted by
+	 * the EVA DateService. 
+	 * Will round to the next full hour if there is
 	 * @param ts milliseconds since 01-01-1970
 	 * @returns a date-time string
 	 */
 	static timeStampToDateString(ts: number): string {
-		const d = new Date(EtherVizService.debugOutput ? ts : ts + EtherVizService.stablePeriod);
-		return DateService.formatDateTime(d);
+		if (!this.debugOutput && !EtherVizService.dontRoundToFullHours && ts + EtherVizService.stablePeriod < Date.now()) {
+			const remainder = ts % EtherVizService.milSecInHour;
+			const fillTime = EtherVizService.milSecInHour - remainder;
+			const roundedTs = ts + fillTime;
+			return DateService.formatDateTime(new Date(roundedTs));
+		} else {
+			return DateService.formatDateTime(new Date(ts));
+		}
 	}
 
 	/**Generates and updates the linked list.
