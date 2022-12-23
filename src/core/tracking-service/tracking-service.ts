@@ -1,8 +1,8 @@
 import CouchDbService from "../couch/couch-db.service";
 import ChangesetService from "../changeset-service/changeset-service";
-import {MiniMapScrollPos} from "./minimapscrollpos.type";
-import {StructuredTrackingData} from "./structured-tracking-data-type";
-import {TrackingData} from "./trackingdata-type";
+import { MiniMapScrollPos } from "./minimapscrollpos.type";
+import { StructuredTrackingData } from "./structured-tracking-data-type";
+import { TrackingData } from "./trackingdata-type";
 import AuthorRegistry from "../authors/author-registry";
 
 /**
@@ -17,14 +17,23 @@ export default class TrackingService {
 	public static instanceRegistry: Record<string, TrackingService> = {};
 	private static docScope = CouchDbService.getConnection("etherpad");
 
-	/* The amount of milliseconds that passes, before a general update of data occurs*/
+	/**The timestamp of the latest db entry that was read */
+	private static latestTimestamp = 0;
+
+	/**Indicates whether there were new entries for that specific pad found */
+	private updateRequired = true;
+
+	/** The amount of milliseconds that passes, before a general update of data occurs*/
 	private static updateDelay = Number(process.env.TRS_UPDATE_DELAY) || 5000;
 
-	/* The name of the pad, for which this instance provides services*/
+	/** The name of the pad, for which this instance provides services*/
 	public readonly pad: string;
 
-	/* Contains the raw data from couch db for the corresponding pad*/
+	/** Contains the raw data from couch db for the corresponding pad*/
 	private padData: TrackingData[] = [];
+
+	/**For each encountered user this contains a StructuredTrackingData object */
+	private structuredTrackingData: Record<string, StructuredTrackingData> = {};
 
 	/** Can be accessed by routers to deliver the most recent information regarding scroll positions */
 	public miniMapScrollPositions: MiniMapScrollPos = {};
@@ -41,7 +50,10 @@ export default class TrackingService {
 	public static async initAndUpdate() {
 		await TrackingService.getAndDistributeDatabaseEntries();
 		Object.keys(TrackingService.instanceRegistry).forEach(padName => {
-			TrackingService.instanceRegistry[padName].generateMiniMapScrollPositions();
+			if (TrackingService.instanceRegistry[padName].updateRequired) {
+				TrackingService.instanceRegistry[padName].generateMiniMapScrollPositions();
+				TrackingService.instanceRegistry[padName].updateRequired = false;
+			}
 		});
 		setTimeout(() => TrackingService.initAndUpdate(), TrackingService.updateDelay);
 	}
@@ -53,18 +65,15 @@ export default class TrackingService {
 	 * disconnected, no scroll data will be stored for this author.
 	 */
 	private generateMiniMapScrollPositions() {
-		const data = this.getStructuredPadData();
+
+		this.buildStructuredPadData();
+		const data = this.structuredTrackingData;
 		const out: MiniMapScrollPos = {};
-
 		Object.entries(data).forEach(([author, dataEntry]) => {
-
 			if (!(dataEntry.lastDisconnected?.time && dataEntry.lastConnected?.time
 				&& dataEntry.lastDisconnected.time > dataEntry.lastConnected.time)) {
 				// user is NOT disconnected
-
 				if (dataEntry.lastTabScrolling != undefined) {
-
-
 					if (dataEntry.lastDisconnected == undefined || (dataEntry.lastTabScrolling.time > dataEntry.lastDisconnected.time)) {
 						// last scrolling event data should be newer than last disconnect event
 						out[author] = {
@@ -73,8 +82,14 @@ export default class TrackingService {
 							topIndex: dataEntry.lastTabScrolling.state.top.index,
 							bottomIndex: dataEntry.lastTabScrolling.state.bottom.index,
 						};
+					} else {
+						// console.log(dataEntry.lastTabScrolling.time + " < " + dataEntry.lastDisconnected.time);
 					}
+				} else {
+					// console.log("no tab scroll detected");
 				}
+			} else {
+				// console.log(author+" not connected");
 			}
 		});
 		this.miniMapScrollPositions = out;
@@ -90,20 +105,20 @@ export default class TrackingService {
 	 * the return object under the key of the author id.
 	 * @returns an object as described above
 	 */
-	private getStructuredPadData() {
+	private buildStructuredPadData() {
 		const data = this.padData;
-		const out: Record<string, StructuredTrackingData> = {};
+		const strData = this.structuredTrackingData;
 		const csp = ChangesetService.instanceRegistry[this.pad];
 		if (!data || !data.length || !csp) {
-			return out;
+			return strData;
 		}
 
 		data.forEach(entry => {
-			if (!out[entry.user]) {
-				out[entry.user] = {};
+			if (!strData[entry.user]) {
+				strData[entry.user] = {};
 			}
 
-			const userdata = out[entry.user];
+			const userdata = strData[entry.user];
 			userdata.lastCHSActive = csp.lastActivityTimeStamp[entry.user];
 			userdata.lastCHSActiveDebug = new Date(userdata.lastCHSActive).toString();
 			switch (entry.type) {
@@ -149,49 +164,49 @@ export default class TrackingService {
 			}
 			}
 		});
-		return out;
+		this.structuredTrackingData = strData;
 	}
 
 	/**
 	 * Collects all available tracking files in couch db
 	 * and distributes each of them to the corresponding
-	 * instance of TrackingService. The data will be stored
+	 * instance of TrackingService, if the timestamp of
+	 * those tracking files is newer. The data will be stored
 	 * in the padData property of the instances.
 	 */
 	private static async getAndDistributeDatabaseEntries() {
-		const data = await CouchDbService.readView(TrackingService.docScope, "evahelpers", "fetchtrackingdata");
+		const data = await CouchDbService.readView(TrackingService.docScope, "evahelpers", "fetchtrackingdata",
+			{ start_key: "tracking:" + (TrackingService.latestTimestamp + 1) });
 		const storage: Record<string, TrackingData[]> = {};
 		Object.keys(TrackingService.instanceRegistry).forEach(padName => {
 			storage[padName] = [];
 		});
-		const authorsList: string[] = [];
+		let maxTimestamp = 0;
 		data.rows.forEach(doc => {
 			const content = doc.value as TrackingData;
+			AuthorRegistry.put(content.user);
 
-			if (!authorsList.includes(content.user)) {
-				AuthorRegistry.put(content.user);
-				authorsList.push(content.user);
-			}
-
-			/* Unfortunately ep-tracking doesn´t seem to initialise the
-			time property that is announced in the ep-tracking-readme.
-			Therefore this will have to be reconstructed here by parsing
-			that specific part from the document key*/
 			if (!content.time) {
-				let timeStampPart = doc.key.substring(28, doc.key.length);
+				let timeStampPart = doc.key.substring(9);
 				timeStampPart = timeStampPart.substring(0, timeStampPart.indexOf(":"));
 				content.time = Number(timeStampPart);
 			}
 			const date = new Date(0);
 			date.setUTCMilliseconds(content.time);
 			content.debugtime = date.toString();
-
+			maxTimestamp = content.time > maxTimestamp ? content.time : maxTimestamp;
 			if (storage[content.pad]) {
 				storage[content.pad].push(content);
 			}
 		});
+		if (maxTimestamp > TrackingService.latestTimestamp) {
+			TrackingService.latestTimestamp = maxTimestamp;
+		}
 		Object.keys(storage).forEach(padName => {
-			TrackingService.instanceRegistry[padName].padData = storage[padName];
+			if (storage[padName].length > 0) {
+				TrackingService.instanceRegistry[padName].padData = storage[padName];
+				TrackingService.instanceRegistry[padName].updateRequired = true;
+			}
 		})
 	}
 
