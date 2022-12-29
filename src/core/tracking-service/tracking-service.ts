@@ -93,6 +93,7 @@ export default class TrackingService {
 			}
 		});
 		this.miniMapScrollPositions = out;
+		console.log(out);
 	}
 
 
