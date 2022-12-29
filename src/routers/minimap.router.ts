@@ -2,7 +2,6 @@ import Router from "../core/router/router.interface";
 import {Application, Request, Response} from "express";
 import logService from "../core/log/log.service";
 import PadRegistry from "../pads";
-import AuthorRegistry from "../core/authors/author-registry";
 import TrackingService from "../core/tracking-service/tracking-service";
 import MinimapService from "../minimap-service/minimap-service";
 
@@ -13,7 +12,6 @@ export default class MinimapRouter implements Router {
 
 	init(app: Application): void {
 		app.get(this.ROUTE + "/blockInfo", this.getBlockInfo);
-		app.get(this.ROUTE + "/authorInfo", this.getAuthorInfo);
 		app.get(this.ROUTE + "/scrollPositions", this.getScrollPositions);
 	}
 
@@ -53,14 +51,6 @@ export default class MinimapRouter implements Router {
 		}
 		logService.debug(MinimapRouter.name, "delivered block info for padName '" + padName + "' to " + _req.ip);
 		res.status(200).send(mmproc.minimapBlocklist);
-	}
-
-	/**
-	 * Returns base info about all active authors.
-	 */
-	async getAuthorInfo(_req: Request, res: Response): Promise<void> {
-		logService.debug(MinimapRouter.name, "delivered author info to " + _req.ip);
-		res.status(200).send(AuthorRegistry.knownAuthors);
 	}
 
 	/**
