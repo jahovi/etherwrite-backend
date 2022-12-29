@@ -40,7 +40,8 @@ DesignDocumentService.register({
 		fetchtrackingdata: {
 			map: function (doc) {
 				if (doc._id.substring(0, 9) == "tracking:") {
-					emit(doc._id, doc.value);
+					const [_tracking, userId, timestamp, sessionMsgId] = doc._id.split(":");
+					emit(`tracking:${timestamp}:${userId}:${sessionMsgId}`, doc.value);
 				}
 			}
 		},
