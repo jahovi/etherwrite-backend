@@ -1,6 +1,8 @@
 import nano, {DocumentScope, DocumentViewParams, DocumentViewResponse, MaybeDocument, ViewDocument} from "nano";
 import logService from "../log/log.service";
 import {MaybeRevisionedViewDocument} from "./maybe-revisioned-view-document.type";
+import LogService from "../log/log.service"
+import dbChangeCallback from "../../websocket/dbchange-callback.interface";
 
 /**
  * Service for communication with the Couch DB server.
@@ -86,6 +88,31 @@ export class CouchDbService {
 				}
 			});
 		});
+	}
+
+	/**
+	 * Registers the given function to be called when a change occurs in the db.
+	 * @param db The database connection to work with.
+	 * @param callback Function to be called on each change in the db.
+	 */
+	public subscribeChanges(db: DocumentScope<any>, callback: dbChangeCallback): void {
+		// Apparently, nothing is actually created or started by changesReader.start. It just returns
+		// an EventEmitter to register listeners with the allways existing and running changesReader.
+		const changesReader = db.changesReader.start({});
+		changesReader.on("error", (err) => {
+			LogService.error(CouchDbService.name, `Fatal error in db changes reader: ${err}`);
+		});
+		changesReader.addListener("change", callback);
+	}
+
+	/**
+	 * Remove the given function from the list of functions called when a db change occurs.
+	 * @param db The database connection to work with.
+	 * @param callback The function to remove from the list of callbacks.
+	 */
+	public unsubscribeChanges(db: DocumentScope<any>, callback: dbChangeCallback): void {
+		const changesReader = db.changesReader.start({});
+		changesReader.removeListener("change", callback);
 	}
 }
 

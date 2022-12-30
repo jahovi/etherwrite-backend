@@ -30,6 +30,7 @@
     "express": "^4.18.2",
     "jsonwebtoken": "^8.5.1",
     "nano": "^10.1.0",
+    "socket.io": "^4.5.4",
     "winston": "^3.8.2"
   }
 }
