@@ -39,7 +39,12 @@ export default class AuthoringRatiosRouter implements Router {
 						res.status(200).send(result)
 					}
 				} else {
-					res.status(404).send("Pad not found.")
+					res.send({
+						authors: [],
+						moodleIDs: [],
+						ratios: [],
+						colors: [],
+					})
 				}
 			});
 		} else {
