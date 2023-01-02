@@ -10,6 +10,8 @@ export type StructuredTrackingData = {
 	lastDisconnected?: TrackingData,
 	lastTabVisible?: TrackingData,
 	lastTabScrolling?: TrackingData,
+	loginTimestamps: number[],
+	logoutTimestamps: number[],
 
 	// the timestamp of the most recent
 	// activity recorded in the changesets

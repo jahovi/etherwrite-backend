@@ -115,7 +115,7 @@ export default class TrackingService {
 
 		data.forEach(entry => {
 			if (!strData[entry.user]) {
-				strData[entry.user] = {};
+				strData[entry.user] = { loginTimestamps: [], logoutTimestamps: [] };
 			}
 
 			const userdata = strData[entry.user];
@@ -130,6 +130,7 @@ export default class TrackingService {
 						userdata.lastConnected = entry;
 					}
 				}
+				userdata.loginTimestamps.push(entry.time);
 				break;
 			}
 			case (4): {
@@ -140,6 +141,7 @@ export default class TrackingService {
 						userdata.lastDisconnected = entry;
 					}
 				}
+				userdata.logoutTimestamps.push(entry.time);
 				break;
 			}
 			case (3): {
