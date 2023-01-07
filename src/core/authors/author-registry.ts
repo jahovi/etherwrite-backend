@@ -49,12 +49,14 @@ export default class AuthorRegistry {
 		logService.debug(AuthorRegistry.name, "Updating author: " + authorId);
 
 		// update aliases and color for this author
-		CouchDbService.getIfExists(AuthorRegistry.scope, "globalAuthor:" + authorId)
+		CouchDbService.readView(AuthorRegistry.scope, "evahelpers", "fetchglobalauthors")
 			.then(data => {
-				if (data) {
-					const authorData = data as AuthorData;
-					AuthorRegistry.knownAuthors[authorId].epalias = authorData.value.name;
-					AuthorRegistry.knownAuthors[authorId].color = String(authorData.value.colorId);
+				if (data.rows) {
+					const authorData = data.rows.find(row => row.key === authorId) as AuthorData | undefined;
+					if (authorData) {
+						AuthorRegistry.knownAuthors[authorId].epalias = authorData.value.name;
+						AuthorRegistry.knownAuthors[authorId].color = String(authorData.value.colorId);
+					}
 					if (AuthorRegistry.knownAuthors[authorId].mapper2author == "") {
 						this.fetchMapperData();
 					}
