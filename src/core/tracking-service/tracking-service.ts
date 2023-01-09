@@ -4,6 +4,10 @@ import { MiniMapScrollPos } from "./minimapscrollpos.type";
 import { StructuredTrackingData } from "./structured-tracking-data-type";
 import { TrackingData } from "./trackingdata-type";
 import AuthorRegistry from "../authors/author-registry";
+import CohesionDiagramService from "../../coh-service/coh-service";
+import { DateService } from "../util/date.service";
+import { LoginData, ScrollEvent } from "./coh-interfaces";
+
 
 /**
  * Collects and processes data from the tracking-entries in couch
@@ -24,7 +28,7 @@ export default class TrackingService {
 	private updateRequired = true;
 
 	/** The amount of milliseconds that passes, before a general update of data occurs*/
-	private static updateDelay = Number(process.env.TRS_UPDATE_DELAY) || 5000;
+	private static updateDelay = Number(process.env.TRS_UPDATE_DELAY) || 2000;
 
 	/** The name of the pad, for which this instance provides services*/
 	public readonly pad: string;
@@ -38,9 +42,13 @@ export default class TrackingService {
 	/** Can be accessed by routers to deliver the most recent information regarding scroll positions */
 	public miniMapScrollPositions: MiniMapScrollPos = {};
 
+	private cohesDiagService: CohesionDiagramService;
+	private scrollEvents: ScrollEvent[] = [];
+
 	constructor(pad: string) {
 		TrackingService.instanceRegistry[pad] = this;
 		this.pad = pad;
+		this.cohesDiagService = CohesionDiagramService.instances[pad];
 	}
 
 	/**
@@ -51,11 +59,63 @@ export default class TrackingService {
 		await TrackingService.getAndDistributeDatabaseEntries();
 		Object.keys(TrackingService.instanceRegistry).forEach(padName => {
 			if (TrackingService.instanceRegistry[padName].updateRequired) {
-				TrackingService.instanceRegistry[padName].generateMiniMapScrollPositions();
-				TrackingService.instanceRegistry[padName].updateRequired = false;
+				const instance = TrackingService.instanceRegistry[padName];
+				instance.buildStructuredPadData();
+				instance.sendCohServiceData();
+				instance.generateMiniMapScrollPositions();
+				instance.updateRequired = false;
 			}
 		});
 		setTimeout(() => TrackingService.initAndUpdate(), TrackingService.updateDelay);
+	}
+
+	public static getUpdateDelay() {
+		return TrackingService.updateDelay;
+	}
+
+	private sendCohServiceData() {
+		// Send new ScrollEvents
+		if (this.scrollEvents.length > 0) {
+			this.scrollEvents.sort((x1, x2) => x1.timestamp - x2.timestamp);
+			this.cohesDiagService.receiveScrollData(this.scrollEvents);
+			this.scrollEvents.length = 0;
+		}
+
+		// Send new Events;
+		const loginData: LoginData[] = [];
+		Object.keys(this.structuredTrackingData).forEach(id => {
+			const dataset = this.structuredTrackingData[id];
+			dataset.loginTimestamps.sort((x1, x2) => x1 - x2);
+			dataset.logoutTimestamps.sort((x1, x2) => x1 - x2);
+			while (dataset.loginTimestamps.length > 0 && dataset.logoutTimestamps.length > 0) {
+				if (dataset.loginTimestamps[0] > dataset.logoutTimestamps[0] 
+					|| (dataset.loginTimestamps[1] && dataset.loginTimestamps[1] < dataset.logoutTimestamps[0]) ) {
+					// logout timestamp is implausible. Presumably the ep_tracking module was unable to detect the 
+					// logout event after this login. 
+					const login = dataset.loginTimestamps.shift() as number;
+					let assumedLogout = login;
+					
+					// The element previously at index 1 is now at index 0:
+					if(dataset.loginTimestamps[0] && dataset.loginTimestamps[0] < dataset.logoutTimestamps[0]) {
+						// We will make an assumption that the logout happened 
+						// halfway between the two newer login timestamps
+						assumedLogout += (dataset.loginTimestamps[0] + login)/2;
+					} else {
+						// We will make an assumption that the logout may have happened an hour after the login. 
+						assumedLogout += 3600000;
+					}
+					loginData.push({ user: id, login: login, logout: assumedLogout })
+				} else {
+					// Data seems plausible
+					loginData.push({ user: id, login: dataset.loginTimestamps.shift() as number, logout: dataset.logoutTimestamps.shift() as number });
+				}
+			}
+		});
+		if (loginData.length > 0) {
+			this.cohesDiagService.receiveLoginData(loginData);
+		}
+
+		this.cohesDiagService.initTrackingData();
 	}
 
 	/**
@@ -65,8 +125,6 @@ export default class TrackingService {
 	 * disconnected, no scroll data will be stored for this author.
 	 */
 	private generateMiniMapScrollPositions() {
-
-		this.buildStructuredPadData();
 		const data = this.structuredTrackingData;
 		const out: MiniMapScrollPos = {};
 		Object.entries(data).forEach(([author, dataEntry]) => {
@@ -78,7 +136,7 @@ export default class TrackingService {
 						// last scrolling event data should be newer than last disconnect event
 						out[author] = {
 							timeStamp: dataEntry.lastTabScrolling.time,
-							debugTimeStamp: new Date(dataEntry.lastTabScrolling.time).toString(),
+							debugTimeStamp: DateService.formatDateTime(new Date(dataEntry.lastTabScrolling.time as number)),
 							topIndex: dataEntry.lastTabScrolling.state.top.index,
 							bottomIndex: dataEntry.lastTabScrolling.state.bottom.index,
 						};
@@ -120,7 +178,7 @@ export default class TrackingService {
 
 			const userdata = strData[entry.user];
 			userdata.lastCHSActive = csp.lastActivityTimeStamp[entry.user];
-			userdata.lastCHSActiveDebug = new Date(userdata.lastCHSActive).toString();
+			userdata.lastCHSActiveDebug = DateService.formatDateTime(new Date(userdata.lastCHSActive));
 			switch (entry.type) {
 			case (0): {
 				if (!userdata.lastConnected) {
@@ -162,6 +220,12 @@ export default class TrackingService {
 						userdata.lastTabScrolling = entry;
 					}
 				}
+				const scrollEvent: ScrollEvent = {
+					user: entry.user, timestamp: entry.time, startParagraph: entry.state.top.index,
+					endParagraph: entry.state.bottom.index ? entry.state.bottom.index : Number.MAX_VALUE
+				};
+				this.scrollEvents.push(scrollEvent);
+
 				break;
 			}
 			}
@@ -195,7 +259,7 @@ export default class TrackingService {
 			}
 			const date = new Date(0);
 			date.setUTCMilliseconds(content.time);
-			content.debugtime = date.toString();
+			content.debugtime = DateService.formatDateTime(date);
 			maxTimestamp = content.time > maxTimestamp ? content.time : maxTimestamp;
 			if (storage[content.pad]) {
 				storage[content.pad].push(content);

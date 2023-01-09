@@ -21,7 +21,7 @@ COUCH_DB_PORT=5984
 
 CSP_UPDATE_DELAY=5000
 
-TRS_UPDATE_DELAY=5000
+TRS_UPDATE_DELAY=2000
 ETHERVIZ_MAX_STATUS_BLOCKS=12
 PADREG_UPDATE_DELAY=5000
 PADS_IGNORE= 
@@ -231,4 +231,36 @@ The returned data is structured as follows:
         }, 
 	}
 ]
+```
+
+### /getCohDiagData
+`GET localhost:8083/getCohDiagData?padName=<your pad name>` will return the data needed for drawing the cohesion diagram. 
+
+The returned data is structured as follows: 
+```js
+{
+	nodes: Node[],
+	distances: NodeDistance[],
+	connections: NodeConnection[]
+}
+```
+The auxiliary data structures: 
+```js
+Node { 
+	id: string, 
+	name: string, 
+	color: string 
+}
+
+NodeDistance { 
+	source: string, 
+	target: string, 
+	dist: number 
+}
+
+NodeConnection { 
+	source: string, 
+	target: string, 
+	intensity: number 
+}
 ```

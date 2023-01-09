@@ -188,6 +188,8 @@ export default class ChangesetService {
 	public attribsToList(attribs: string): string[] {
 		const list: string[] = [];
 		attribs.substring(1, attribs.length).split("*").forEach(n => list.push(String(parseInt(n, 36))));
+		while(list[0] === "NaN")
+			list.shift();
 		return list;
 	}
 
