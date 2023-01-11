@@ -4,6 +4,7 @@ import {MoodleUser} from "../core/middleware/moodle-user.middleware";
 import {activityService} from "../activity/activity.service";
 import {ActivitiesAggregatedEntry} from "../activity/activities-aggregated-entry";
 import {OperationsAggregatedEntry} from "../activity/operations-aggregated-entry";
+import {authorService} from "../core/authors/author.service";
 
 export class ActivityRouter implements Router {
 
@@ -27,7 +28,7 @@ export class ActivityRouter implements Router {
 			throw new Error("Query parameter \"padName\" is required.");
 		}
 
-		if (!user.isModerator && user.padName !== padName) {
+		if (!authorService.isAllowedToSeePadData(user, padName)) {
 			// Unauthorized access, send empty data.
 			return res.send([]);
 		}
@@ -56,13 +57,14 @@ export class ActivityRouter implements Router {
 	 */
 	private async getOperationListOfPad(req: Request, res: Response) {
 		const user: MoodleUser = res.locals.user;
+		console.log(user);
 		const padName: string = req.params.padName as string;
 
 		if (!padName) {
 			throw new Error("Query parameter \"padName\" is required.");
 		}
 
-		if (!user.isModerator && user.padName !== padName) {
+		if (!authorService.isAllowedToSeePadData(user, padName)) {
 			// Unauthorized access, send empty data.
 			return res.send([]);
 		}

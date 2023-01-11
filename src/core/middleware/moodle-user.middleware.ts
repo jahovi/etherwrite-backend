@@ -41,12 +41,25 @@ export interface MoodleUser {
 	isModerator: boolean,
 
 	/**
+	 * The instances this user is allowed to see.
+	 */
+	editorInstances: MoodleUserEditor[]
+}
+
+export interface MoodleUserEditor {
+
+	/**
+	 * The name of the pad which is available.
+	 */
+	padName: string;
+
+	/**
 	 * The id of the group in etherpad.
 	 */
 	epGroup: string;
 
 	/**
-	 * The name of the pad from which the request is happening.
+	 * The name of the group this editor belongs to.
 	 */
-	padName: string;
+	groupName: string;
 }
