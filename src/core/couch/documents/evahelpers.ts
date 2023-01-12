@@ -1,4 +1,4 @@
-import {DesignDocumentService} from "../design-document.service";
+import { DesignDocumentService } from "../design-document.service";
 
 declare const emit: any;
 
@@ -118,5 +118,18 @@ DesignDocumentService.register({
 				}
 			}
 		},
+		fetchrevdata: {
+			map: function (doc) {
+				const index = doc._id.indexOf(":revs:");
+				if (index > 0 && doc._id.startsWith("pad:")) {
+					const keyIndex = parseInt(doc._id.substring(index + 6));
+					let base36Index = keyIndex.toString(36);
+					while (base36Index.length < 6) {
+						base36Index = "0" + base36Index;
+					}
+					emit(doc._id.substring(4, index) + ":" + base36Index, doc);
+				}
+			}
+		}
 	},
 });

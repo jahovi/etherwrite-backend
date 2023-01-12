@@ -5,7 +5,7 @@ import PadInfo from "./padinfo.interface";
 import PadRev from "./pad-rev.interface";
 import AuthorRegistry from "../authors/author-registry";
 import logService from "../log/log.service";
-import {RevData} from "./rev-data.type";
+import { RevData } from "./rev-data.type";
 
 /**
  * A Service that gathers the changesets and other information in
@@ -26,8 +26,6 @@ export default class ChangesetService {
 
 	/** The name of the etherpad, that this instance provides services for*/
 	public readonly padName: string;
-	/** The number of the newest rev dataset, that has been acquired from CouchDB*/
-	public listRevStatus = -1; //
 
 	/**Contains the most recent version of basic information regarding that etherpad */
 	public padInfo?: PadInfo;
@@ -50,7 +48,7 @@ export default class ChangesetService {
 	private padHead = 0; // indicates the newest pad:[name]:revs:[padHead]
 
 	private subscriberCallbacks: Function[] = [];
-	private lastSubscriberRevUpdate = 0;
+	private lastSubscriberRevUpdate = -1;
 
 
 	/**
@@ -58,21 +56,10 @@ export default class ChangesetService {
 	 */
 	public constructor(padName: string) {
 		this.padName = padName;
-		if (!ChangesetService.instanceRegistry[padName]) {
-			ChangesetService.instanceRegistry[padName] = this;
-		}
-		this.initialise();
-	}
+		ChangesetService.instanceRegistry[padName] = this;
 
-	/**Only called once in the constructor.
-	 */
-	private initialise() {
-		this.checkNewInfoInDataBase()
-			.then(() => this.getRevs())
-			.then(() => {
-				setInterval(() =>
-					this.prepareUpdate(), ChangesetService.blocksUpdateDelay);
-			});
+		setInterval(() =>
+			this.prepareUpdate(), ChangesetService.blocksUpdateDelay);
 	}
 
 
@@ -154,24 +141,19 @@ export default class ChangesetService {
 	 * 'this.revData' under their index number as the key.
 	 */
 	private async getRevs() {
-		const promises: Promise<void>[] = [];
-		for (let i = this.listRevStatus + 1; i <= (this.padHead ? this.padHead : 0); i++) {
-			promises.push(this.getRev(i));
+		let startKey = (this.lastSubscriberRevUpdate + 1).toString(36);
+		while (startKey.length < 6) {
+			startKey = "0" + startKey;
 		}
-
-		await Promise.all(promises);
-	}
-
-	/**This method is only internally called
-	 * by the 'getRevs()' method.
-	 *
-	 * @param revNumber
-	 */
-	private async getRev(revNumber: number) {
-		const data = await this.docScope?.get("pad:" + this.padName + ":revs:" + revNumber);
-		const revData = data as PadRev;
-		const cs = Changeset.unpack(revData.value.changeset);
-		this.revData[revNumber] = {cset: cs, author: revData.value.meta.author, timestamp: revData.value.meta.timestamp};
+		startKey = this.padName + ":" + startKey;
+		const endKey = this.padName + ":zzzzzz";
+		const data = await CouchDbService.readView(this.docScope, "evahelpers", "fetchrevdata", { start_key: startKey, end_key: endKey });
+		data.rows.forEach(row => {
+			const revData = row.value as PadRev;
+			const cs = Changeset.unpack(revData.value.changeset);
+			const revNumber = parseInt(row.key.split(":")[1], 36);
+			this.revData[revNumber] = { cset: cs, author: revData.value.meta.author, timestamp: revData.value.meta.timestamp };			
+		})
 	}
 
 	/**Transforms the attribs string from
@@ -188,7 +170,7 @@ export default class ChangesetService {
 	public attribsToList(attribs: string): string[] {
 		const list: string[] = [];
 		attribs.substring(1, attribs.length).split("*").forEach(n => list.push(String(parseInt(n, 36))));
-		while(list[0] === "NaN")
+		while (list[0] === "NaN")
 			list.shift();
 		return list;
 	}

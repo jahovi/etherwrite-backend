@@ -49,7 +49,8 @@ export default class MinimapRouter implements Router {
 			res.status(404).send([]);
 			return;
 		}
-		logService.debug(MinimapRouter.name, "delivered block info for padName '" + padName + "' to " + _req.ip);
+		logService.debug(MinimapRouter.name, "delivered block info for padName '" + padName + "' to " 
+		+ _req.ip + "("+JSON.stringify(mmproc.minimapBlocklist).length + " chars of JSON data)");
 		res.status(200).send(mmproc.minimapBlocklist);
 	}
 
