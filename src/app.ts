@@ -1,5 +1,5 @@
 import * as dotenv from "dotenv";
-import express, {  } from "express";
+import express from "express";
 import "./documents";
 import designDocumentService from "./core/couch/design-document.service";
 import logService from "./core/log/log.service";
@@ -8,7 +8,7 @@ import PadRegistry from "./pads";
 import AuthorRegistry from "./core/authors/author-registry";
 import TrackingService from "./core/tracking-service/tracking-service";
 import http from "http";
-import { Server } from "socket.io";
+import {Server} from "socket.io";
 import wsRouteService from "./websocket/wsroute-service/wsroutes.service";
 
 dotenv.config();
@@ -30,7 +30,7 @@ const io = new Server(server, {
 		origin: "http://localhost:8081",
 	},
 });
-wsRouteService.innitWsRoutes(io);
+wsRouteService.initWsRoutes(io);
 
 // Update or create necessary documents.
 designDocumentService.registerAllDocuments()

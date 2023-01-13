@@ -6,7 +6,6 @@ import EtherVizRouter from "./routers/etherviz-router";
 import {ActivityRouter} from "./routers/activity.router";
 import CohesionDiagramRouter from "./routers/coh-diagram-router";
 import AuthorRouter from "./routers/author.router";
-import WsTestRouter from "./routers/wstest.router";
 
 export default [
 	DBTestRouter,
@@ -17,5 +16,4 @@ export default [
 	ActivityRouter,
 	CohesionDiagramRouter,
 	AuthorRouter,
-	WsTestRouter,
 ];
