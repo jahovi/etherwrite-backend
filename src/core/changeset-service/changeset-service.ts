@@ -5,7 +5,10 @@ import PadInfo from "./padinfo.interface";
 import PadRev from "./pad-rev.interface";
 import AuthorRegistry from "../authors/author-registry";
 import logService from "../log/log.service";
-import { RevData } from "./rev-data.type";
+import {RevData} from "./rev-data.type";
+import {Subject} from "../subscriber/subject";
+import DbChange from "../../websocket/dbchange.interface";
+import DbDocs from "../../websocket/dbdocs";
 
 /**
  * A Service that gathers the changesets and other information in
@@ -15,14 +18,10 @@ import { RevData } from "./rev-data.type";
  * as subscribers to ChangesetService and will receive a callback
  * every time when new revision data was found in CouchDB.
  */
-export default class ChangesetService {
+export default class ChangesetService extends Subject<Record<number, RevData>> {
 
 	/**Grants access to every created instance of this class*/
 	public static readonly instanceRegistry: Record<string, ChangesetService> = {};
-
-	/** The minimum timespan in milliseconds, before a check for newer
-	data from CouchDB is made*/
-	public static readonly blocksUpdateDelay = Number(process.env.CSP_UPDATE_DELAY) || 5000;
 
 	/** The name of the etherpad, that this instance provides services for*/
 	public readonly padName: string;
@@ -47,38 +46,34 @@ export default class ChangesetService {
 	private docScope = CouchDbService.getConnection("etherpad");
 	private padHead = 0; // indicates the newest pad:[name]:revs:[padHead]
 
-	private subscriberCallbacks: Function[] = [];
 	private lastSubscriberRevUpdate = -1;
 
+	/**
+	 * Returns the data that subscribers should receive.
+	 */
+	public getSubjectData(): Record<number, RevData> {
+		return this.revData;
+	}
 
 	/**
 	 * @param padName the name of the etherpad that this instance will provide services for
 	 */
 	public constructor(padName: string) {
+		super();
 		this.padName = padName;
 		ChangesetService.instanceRegistry[padName] = this;
 
-		setInterval(() =>
-			this.prepareUpdate(), ChangesetService.blocksUpdateDelay);
+		// First initial update.
+		this.prepareUpdate();
+		// After this, only update on new database changes.
+		CouchDbService.subscribeChanges(this.docScope, (change: DbChange) => {
+			if (DbDocs.padDoc.test(change.id) && change.id.includes(padName)) {
+				this.prepareUpdate();
+			}
+		})
 	}
-
 
 	/**
-	 * Call this once on the corresponding instance
-	 * from ChangesetService.instanceRegistry[padName]
-	 * @param callback The callback function to execute when new revisions are found.
-	 */
-	public subscribe(callback: Function) {
-		this.subscriberCallbacks.push(callback);
-	}
-
-	private notifySubscribers() {
-		this.subscriberCallbacks.forEach(call => call());
-	}
-
-	/**Call this only after the timespan set in
-	 * the 'blocksUpdateDelay' attribute has passed.
-	 *
 	 * This will cause requests for new information
 	 * from the database and then build an expansion
 	 * of the linked list.
@@ -147,12 +142,12 @@ export default class ChangesetService {
 		}
 		startKey = this.padName + ":" + startKey;
 		const endKey = this.padName + ":zzzzzz";
-		const data = await CouchDbService.readView(this.docScope, "evahelpers", "fetchrevdata", { start_key: startKey, end_key: endKey });
+		const data = await CouchDbService.readView(this.docScope, "evahelpers", "fetchrevdata", {start_key: startKey, end_key: endKey});
 		data.rows.forEach(row => {
 			const revData = row.value as PadRev;
 			const cs = Changeset.unpack(revData.value.changeset);
 			const revNumber = parseInt(row.key.split(":")[1], 36);
-			this.revData[revNumber] = { cset: cs, author: revData.value.meta.author, timestamp: revData.value.meta.timestamp };			
+			this.revData[revNumber] = {cset: cs, author: revData.value.meta.author, timestamp: revData.value.meta.timestamp};
 		})
 	}
 

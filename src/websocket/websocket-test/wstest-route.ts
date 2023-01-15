@@ -23,7 +23,7 @@ export default class WsTestRoute extends AbstractWsRoute {
 	 *
 	 * @param socket The socket to the client. The data property contain client information.
 	 */
-	public connectionHandler(socket: Socket): void {
+	public async connectionHandler(socket: Socket): Promise<void> {
 		this.dbConnection = couchDbService.getConnection("etherpad");
 		const charsInPadCalculator = new CharsAndWordsInPadCalculator()
 		const padName: string = socket.handshake.query.padName as string;

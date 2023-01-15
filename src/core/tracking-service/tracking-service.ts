@@ -1,12 +1,15 @@
 import CouchDbService from "../couch/couch-db.service";
 import ChangesetService from "../changeset-service/changeset-service";
-import { MiniMapScrollPos } from "./minimapscrollpos.type";
-import { StructuredTrackingData } from "./structured-tracking-data-type";
-import { TrackingData } from "./trackingdata-type";
+import {MiniMapScrollPos} from "./minimapscrollpos.type";
+import {StructuredTrackingData} from "./structured-tracking-data-type";
+import {TrackingData} from "./trackingdata-type";
 import AuthorRegistry from "../authors/author-registry";
 import CohesionDiagramService from "../../coh-service/coh-service";
-import { DateService } from "../util/date.service";
-import { LoginData, ScrollEvent } from "./coh-interfaces";
+import {DateService} from "../util/date.service";
+import {LoginData, ScrollEvent} from "./coh-interfaces";
+import {Subject} from "../subscriber/subject";
+import DbChange from "../../websocket/dbchange.interface";
+import DbDocs from "../../websocket/dbdocs";
 
 
 /**
@@ -15,7 +18,7 @@ import { LoginData, ScrollEvent } from "./coh-interfaces";
  * is assigned to each pad. The creation of instances is handled in
  * the PadRegistry-class.
  */
-export default class TrackingService {
+export default class TrackingService extends Subject<MiniMapScrollPos> {
 
 	/** Stores the instances of this class under the corresponding pad names*/
 	public static instanceRegistry: Record<string, TrackingService> = {};
@@ -46,9 +49,17 @@ export default class TrackingService {
 	private scrollEvents: ScrollEvent[] = [];
 
 	constructor(pad: string) {
+		super();
 		TrackingService.instanceRegistry[pad] = this;
 		this.pad = pad;
 		this.cohesDiagService = CohesionDiagramService.instances[pad];
+	}
+
+	/**
+	 * Returns the data that subscribers should receive.
+	 */
+	getSubjectData(): MiniMapScrollPos {
+		return this.miniMapScrollPositions;
 	}
 
 	/**
@@ -57,16 +68,21 @@ export default class TrackingService {
 	 */
 	public static async initAndUpdate() {
 		await TrackingService.getAndDistributeDatabaseEntries();
-		Object.keys(TrackingService.instanceRegistry).forEach(padName => {
-			if (TrackingService.instanceRegistry[padName].updateRequired) {
-				const instance = TrackingService.instanceRegistry[padName];
-				instance.buildStructuredPadData();
-				instance.sendCohServiceData();
-				instance.generateMiniMapScrollPositions();
-				instance.updateRequired = false;
+		CouchDbService.subscribeChanges(this.docScope, async (change: DbChange) => {
+			if (DbDocs.tracking.test(change.id)) {
+				await TrackingService.getAndDistributeDatabaseEntries();
+				Object.keys(TrackingService.instanceRegistry).forEach(padName => {
+					if (TrackingService.instanceRegistry[padName].updateRequired) {
+						const instance = TrackingService.instanceRegistry[padName];
+						instance.buildStructuredPadData();
+						instance.sendCohServiceData();
+						instance.generateMiniMapScrollPositions();
+						instance.updateRequired = false;
+						instance.notifySubscribers();
+					}
+				});
 			}
-		});
-		setTimeout(() => TrackingService.initAndUpdate(), TrackingService.updateDelay);
+		})
 	}
 
 	public static getUpdateDelay() {
@@ -88,26 +104,26 @@ export default class TrackingService {
 			dataset.loginTimestamps.sort((x1, x2) => x1 - x2);
 			dataset.logoutTimestamps.sort((x1, x2) => x1 - x2);
 			while (dataset.loginTimestamps.length > 0 && dataset.logoutTimestamps.length > 0) {
-				if (dataset.loginTimestamps[0] > dataset.logoutTimestamps[0] 
-					|| (dataset.loginTimestamps[1] && dataset.loginTimestamps[1] < dataset.logoutTimestamps[0]) ) {
-					// logout timestamp is implausible. Presumably the ep_tracking module was unable to detect the 
-					// logout event after this login. 
+				if (dataset.loginTimestamps[0] > dataset.logoutTimestamps[0]
+					|| (dataset.loginTimestamps[1] && dataset.loginTimestamps[1] < dataset.logoutTimestamps[0])) {
+					// logout timestamp is implausible. Presumably the ep_tracking module was unable to detect the
+					// logout event after this login.
 					const login = dataset.loginTimestamps.shift() as number;
 					let assumedLogout = login;
-					
+
 					// The element previously at index 1 is now at index 0:
-					if(dataset.loginTimestamps[0] && dataset.loginTimestamps[0] < dataset.logoutTimestamps[0]) {
-						// We will make an assumption that the logout happened 
+					if (dataset.loginTimestamps[0] && dataset.loginTimestamps[0] < dataset.logoutTimestamps[0]) {
+						// We will make an assumption that the logout happened
 						// halfway between the two newer login timestamps
-						assumedLogout += (dataset.loginTimestamps[0] + login)/2;
+						assumedLogout += (dataset.loginTimestamps[0] + login) / 2;
 					} else {
-						// We will make an assumption that the logout may have happened an hour after the login. 
+						// We will make an assumption that the logout may have happened an hour after the login.
 						assumedLogout += 3600000;
 					}
-					loginData.push({ user: id, login: login, logout: assumedLogout })
+					loginData.push({user: id, login: login, logout: assumedLogout})
 				} else {
 					// Data seems plausible
-					loginData.push({ user: id, login: dataset.loginTimestamps.shift() as number, logout: dataset.logoutTimestamps.shift() as number });
+					loginData.push({user: id, login: dataset.loginTimestamps.shift() as number, logout: dataset.logoutTimestamps.shift() as number});
 				}
 			}
 		});
@@ -173,7 +189,7 @@ export default class TrackingService {
 
 		data.forEach(entry => {
 			if (!strData[entry.user]) {
-				strData[entry.user] = { loginTimestamps: [], logoutTimestamps: [] };
+				strData[entry.user] = {loginTimestamps: [], logoutTimestamps: []};
 			}
 
 			const userdata = strData[entry.user];
@@ -222,7 +238,7 @@ export default class TrackingService {
 				}
 				const scrollEvent: ScrollEvent = {
 					user: entry.user, timestamp: entry.time, startParagraph: entry.state.top.index,
-					endParagraph: entry.state.bottom.index ? entry.state.bottom.index : Number.MAX_VALUE
+					endParagraph: entry.state.bottom.index ? entry.state.bottom.index : Number.MAX_VALUE,
 				};
 				this.scrollEvents.push(scrollEvent);
 
@@ -242,7 +258,7 @@ export default class TrackingService {
 	 */
 	private static async getAndDistributeDatabaseEntries() {
 		const data = await CouchDbService.readView(TrackingService.docScope, "evahelpers", "fetchtrackingdata",
-			{ start_key: "tracking:" + (TrackingService.latestTimestamp + 1) });
+			{start_key: "tracking:" + (TrackingService.latestTimestamp + 1)});
 		const storage: Record<string, TrackingData[]> = {};
 		Object.keys(TrackingService.instanceRegistry).forEach(padName => {
 			storage[padName] = [];

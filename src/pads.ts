@@ -38,8 +38,8 @@ export default class PadRegistry {
 			if (padName && !ChangesetService.instanceRegistry[padName]) {
 				new ChangesetService(padName.toString());
 				// create instances of all subclasses of AbstractChangesetSubscriber
-				(subscribers as ConstructorOf<AbstractChangesetSubscriber>[]).forEach(subscriber => new subscriber(padName));
-				logService.info(PadRegistry.name,"Created Services for '"+padName+"'");
+				(subscribers as ConstructorOf<AbstractChangesetSubscriber<any>>[]).forEach(subscriber => new subscriber(padName));
+				logService.info(PadRegistry.name, "Created Services for '" + padName + "'");
 			}
 			if (padName && !TrackingService.instanceRegistry[padName]) {
 				new TrackingService(padName);
@@ -47,6 +47,32 @@ export default class PadRegistry {
 		});
 	}
 
+	/**
+	 * Helper method to retrieve an instance from the given map of service instances.
+	 * If the instance is not there yet, the registry updates itself to try and find new pads to register services for.
+	 * @param instances The map of instances to find the instance in.
+	 * @param padName The name of the pad to find the instance for.
+	 * @return An instance of the service.
+	 * @throws Error if no service instance could not be found. This must mean that the pad is not registered correctly.
+	 */
+	public static async getServiceInstance<T>(instances: Record<string, T>, padName: string): Promise<T> {
+
+		let serviceInstance = instances[padName];
+
+		if (!serviceInstance) {
+			// maybe there is new pad in the database? let´s check...
+			await PadRegistry.initAndUpdate();
+
+			serviceInstance = instances[padName];
+
+			if (!serviceInstance) {
+				// padName apparently unknown
+				throw new Error(`Pad "${padName}" not found.`);
+			}
+		}
+
+		return serviceInstance;
+	}
 
 	private static insertIfNew(name: string) {
 		if (!PadRegistry.padNames.includes(name)) {
@@ -69,5 +95,6 @@ export default class PadRegistry {
 			}
 		}
 	}
+
 
 }

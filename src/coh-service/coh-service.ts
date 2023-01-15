@@ -1,65 +1,64 @@
 import AbstractChangesetSubscriber from "../core/changeset-service/abstract-changeset-subscriber";
 import CohList from "./coh-list";
-import Changeset, { Op } from "../changeset/Changeset";
+import Changeset, {Op} from "../changeset/Changeset";
 import CSRaw from "../core/changeset-service/csraw.interface";
-import { Paragraph, Node, NodeDistance, NodeConnection, CohDiagramData } from "./coh-interfaces";
-import { LoginData, ScrollEvent } from "../core/tracking-service/coh-interfaces";
+import {CohDiagramData, Node, NodeConnection, NodeDistance, Paragraph} from "./coh-interfaces";
+import {LoginData, ScrollEvent} from "../core/tracking-service/coh-interfaces";
 import TrackingService from "../core/tracking-service/tracking-service";
-import { InteractionCounter, LoginDataHandler } from "./coh-service-helpers";
+import {InteractionCounter, LoginDataHandler} from "./coh-service-helpers";
 import AuthorRegistry from "../core/authors/author-registry";
-import { DateService } from "../core/util/date.service";
 
 
-/**A Service class that gathers data from the ChangesetProcessor and the 
+/**A Service class that gathers data from the ChangesetProcessor and the
  * TrackingService in order to provide the backend data required for the
- * cohesion diagram. 
+ * cohesion diagram.
  */
-export default class CohesionDiagramService extends AbstractChangesetSubscriber {
+export default class CohesionDiagramService extends AbstractChangesetSubscriber<CohList> {
 
 	/**
-	 * Contains all instances of 
+	 * Contains all instances of
 	 */
 	public static instances: Record<string, CohesionDiagramService> = {};
 
 	/**
-	 * The linked list that stores the content of the Etherpad Editor. 
+	 * The linked list that stores the content of the Etherpad Editor.
 	 */
 	private list: CohList = new CohList();
 
 	/**
-	 * Stores the index of the latest 
+	 * Stores the index of the latest
 	 */
 	private listRevStatus = 0;
 
-	/**Contains the timestamps that are considered stable, 
-	 * so that these timestamps are used for evaluation. 
+	/**Contains the timestamps that are considered stable,
+	 * so that these timestamps are used for evaluation.
 	 */
 	private stableTimeStamps: number[] = [];
-	private readonly stableTimeStampInterval = 60000; // milliseconds 
+	private readonly stableTimeStampInterval = 60000; // milliseconds
 
 	/**A helper object that consumes interaction events and
-	 * will return the number of content related interactions 
-	 * of each pair of authors. This includes: 
+	 * will return the number of content related interactions
+	 * of each pair of authors. This includes:
 	 * - Writing text in a paragraph that was largely written by someone else
 	 * - Applying text format operations that affect text written by someone else
 	 * - Deleting text that was written by someone else
 	 */
 	private contribCounter: InteractionCounter = new InteractionCounter();
 
-	/**A helper object that consumes text perception events and will return the 
-	 * number of such events that happened between each pair of authors. 
+	/**A helper object that consumes text perception events and will return the
+	 * number of such events that happened between each pair of authors.
 	 */
 	private perceptionCounter: InteractionCounter = new InteractionCounter();
 
 	/**A helper object that consumes objects that represent the online
-	 * timespan of users. It will return the amount of milliseconds that 
-	 * each pair of authors has spent simultaneously in the text editor. 
+	 * timespan of users. It will return the amount of milliseconds that
+	 * each pair of authors has spent simultaneously in the text editor.
 	 */
 	private loginDataHandler: LoginDataHandler = new LoginDataHandler();
 
 	/**Is set to false, as long as the TrackingService hasn´t called back
-	 * at least once. 
-	  */
+	 * at least once.
+	 */
 	private trackingDataInitComplete = false;
 	private scrollData: ScrollEvent[] = [];
 
@@ -69,38 +68,42 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 		CohesionDiagramService.instances[padName] = this;
 	}
 
+	public getSubjectData(): CohList {
+		throw new Error("Method not implemented."); // TODO
+	}
+
 	/**
 	 * @returns The data object that contains the information
-	 *  that is necessary for drawing the cohesion diagram. 
+	 *  that is necessary for drawing the cohesion diagram.
 	 */
 	public getCohesionData(): CohDiagramData {
-		// Make sure we used the latest data we could possibly acquire. 
+		// Make sure we used the latest data we could possibly acquire.
 		this.findStableTimeStamps();
 		this.buildList();
 
-		// Retrieve the data from the helper objects. 
+		// Retrieve the data from the helper objects.
 		const loginData = this.loginDataHandler.getScores();
 		const perceptionData = this.perceptionCounter.getCounters();
 		const contribData = this.contribCounter.getCounters();
 
 		// Define, to which degree the distance properties are
-		// derived from either the perception score or the 
-		// login/logout data. 
-		const perceptionDataWeight = 0.5; // Can be adjusted to any decimal number between 0 and 1. 
+		// derived from either the perception score or the
+		// login/logout data.
+		const perceptionDataWeight = 0.5; // Can be adjusted to any decimal number between 0 and 1.
 		const loginDataWeight = 1 - perceptionDataWeight;
 
 
-		// We retrieve the IDs of all authors that have left their 
+		// We retrieve the IDs of all authors that have left their
 		// footprints in this pad according to the CouchDB
 		const authors = this.dataSource.authorKeys.map(key => this.dataSource.attrToAuthorMapping[key]).sort();
 		if (authors.length < 2) {
-			// Return an empty object if there are not enough authors for 
-			// meaningful interactions. 
-			return { nodes: [], distances: [], connections: [] };
+			// Return an empty object if there are not enough authors for
+			// meaningful interactions.
+			return {nodes: [], distances: [], connections: []};
 		}
 
 		// These author IDs are the basis for creating a Node object
-		// for each author. 
+		// for each author.
 		const nodes: Node[] = [];
 		authors.forEach(author => {
 			const authorData = AuthorRegistry.knownAuthors[author];
@@ -112,7 +115,7 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 		});
 
 		// Generate keys for each possible pair of authors,
-		// matching the key convention of the helper class object. 
+		// matching the key convention of the helper class object.
 		const keys: string[] = [];
 		authors.forEach(author => {
 			authors.forEach(otherAuthor => {
@@ -126,23 +129,23 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 		const loginRawData: number[] = [];
 		const perceptionRawData: number[] = [];
 		const contribRawData: number[] = [];
-		
-		// Store the data in these lists. 
+
+		// Store the data in these lists.
 		// The indexes of the data-content are corresponding to
-		// the order in which the author IDs are stored in the 
-		// keys-array. 
+		// the order in which the author IDs are stored in the
+		// keys-array.
 		keys.forEach(key => {
 			loginRawData.push(loginData[key] ? loginData[key] : 0);
 			perceptionRawData.push(perceptionData[key] ? perceptionData[key] : 0);
 			contribRawData.push(contribData[key] ? contribData[key] : 0);
 		});
 
-		// Transform the data into values in a range that fits the diagram. 
+		// Transform the data into values in a range that fits the diagram.
 		const loginDiagramData = this.generateDistanceData(loginRawData);
 		const perceptionDiagramData = this.generateDistanceData(perceptionRawData);
 		const connDiagramData = this.generateConnectionData(contribRawData);
-		
-		
+
+
 		const distances: NodeDistance[] = [];
 		const connections: NodeConnection[] = [];
 		for (let i = 0; i < keys.length; i++) {
@@ -162,15 +165,15 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 			})
 		}
 
-		const out = { nodes: nodes, distances: distances, connections: connections };
+		const out = {nodes: nodes, distances: distances, connections: connections};
 		return out;
 	}
 
 	/**Maps the text interaction numbers to decimal numbers in
 	 * the range between 0 and 1, with 1 representing the highest
 	 * occurring value. All other values are calculated proportionally
-	 * to the highest value. 
-	 * 
+	 * to the highest value.
+	 *
 	 * @param array containing one or more non negative numbers
 	 * @returns an array of the same length, containing decimals between 0 and 1
 	 */
@@ -180,11 +183,11 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 		return array.map(n => n / max);
 	}
 
-	/**Maps the simulaneity-related scoring numbers to values 
+	/**Maps the simulaneity-related scoring numbers to values
 	 * between 0.2 and 1, with 0.2 representing the highest occurring
 	 * value in the input array. All other values are calculated proportionally
-	 * to this. An input value of 0 will be mapped to 1. 
-	 * 
+	 * to this. An input value of 0 will be mapped to 1.
+	 *
 	 * @param array containing one or more non negative numbers
 	 * @returns an array of the same length, containing decimals between 0.2 and 1
 	 */
@@ -195,7 +198,7 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 	}
 
 	/**This method will be called by the TrackingService in order to
-	 * unlock the initial build-up of the linked list. 
+	 * unlock the initial build-up of the linked list.
 	 */
 	public initTrackingData(): void {
 		this.trackingDataInitComplete = true;
@@ -203,39 +206,39 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 
 	/**
 	 * This method will be called by the TrackingService in order to
-	 * hand over an array of recent scroll events. 
+	 * hand over an array of recent scroll events.
 	 * @param scrollEvents ascendingly ordered by timestamps
 	 */
 	public receiveScrollData(scrollEvents: ScrollEvent[]): void {
 		this.scrollData = [...this.scrollData, ...scrollEvents];
-		const authorTime:Record<string,number> = {};
-		const dropIndices:number[] = [];
-		for(let i = this.scrollData.length-1;i>=0;i--){
+		const authorTime: Record<string, number> = {};
+		const dropIndices: number[] = [];
+		for (let i = this.scrollData.length - 1; i >= 0; i--) {
 			const author = this.scrollData[i].user;
-			if(!authorTime[author]){
+			if (!authorTime[author]) {
 				authorTime[author] = this.scrollData[i].timestamp;
 			} else {
-				if(authorTime[author]-5000<this.scrollData[i].timestamp){
-				// If the earlier timestamp was less than 5 seconds prior to
-				// the later timestamp, then that earlier scroll event doesn´t 
-				// seem meaningful enough. It is not plausible to assume that
-				// the scrolling user was thouroughly reading something in
-				// such a small timespan. 
+				if (authorTime[author] - 5000 < this.scrollData[i].timestamp) {
+					// If the earlier timestamp was less than 5 seconds prior to
+					// the later timestamp, then that earlier scroll event doesn´t
+					// seem meaningful enough. It is not plausible to assume that
+					// the scrolling user was thouroughly reading something in
+					// such a small timespan.
 					dropIndices.unshift(i);
 				}
 				authorTime[author] = this.scrollData[i].timestamp;
 			}
 		}
 
-		for(let i = 0; i < dropIndices.length;i++){
-			this.scrollData.splice(dropIndices[i]-i, 1);
+		for (let i = 0; i < dropIndices.length; i++) {
+			this.scrollData.splice(dropIndices[i] - i, 1);
 		}
 
 		// If there aren´t any revision datasets that are waiting to be
 		// inserted in the linked list, then the scroll events must be
 		// evaluated on the basis of the current status of the linked list.
-		if(!this.dataSource.revData[this.listRevStatus+1]){
-			while(this.scrollData.length > 0){
+		if (!this.dataSource.revData[this.listRevStatus + 1]) {
+			while (this.scrollData.length > 0) {
 				this.handleScrollEvent();
 			}
 		}
@@ -244,9 +247,9 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 
 	/**
 	 * This method will be called by the TrackingService in order to
-	 * hand over an array of recent login/logout events. 
-	 * Note, that no login is reported without a corresponding logout. 
-	 * @param loginEvents 
+	 * hand over an array of recent login/logout events.
+	 * Note, that no login is reported without a corresponding logout.
+	 * @param loginEvents
 	 */
 	public receiveLoginData(loginEvents: LoginData[]) {
 		this.loginDataHandler.receiveData(loginEvents);
@@ -254,7 +257,7 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 
 	dataSourceCallback(): void {
 		if (!this.trackingDataInitComplete) {
-			setTimeout(this.dataSourceCallback, 100);
+			setTimeout(() => this.dataSourceCallback(), 100);
 			return;
 		}
 		this.findStableTimeStamps();
@@ -268,8 +271,8 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 
 	/**
 	 * Iterates the linked list and looks for seenBy-entries
-	 * that haven´t been counted yet. These entries will get 
-	 * counted and then marked accordingly. 
+	 * that haven´t been counted yet. These entries will get
+	 * counted and then marked accordingly.
 	 */
 	private evaluateSeenBy(): void {
 		let runner = this.list.head.next;
@@ -285,12 +288,12 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 	}
 
 	/**
-	 * Scans the linked list and detects paragraphs of text. 
+	 * Scans the linked list and detects paragraphs of text.
 	 * Each paragraph is stored to a list. List objects contain
-	 * the start and end indices as well as the information, to 
-	 * what extent authors have contributed to a paragraph. 
+	 * the start and end indices as well as the information, to
+	 * what extent authors have contributed to a paragraph.
 	 * If one author owns more than half of all characters in a
-	 * paragraph at a given time, he is considered the main contributor. 
+	 * paragraph at a given time, he is considered the main contributor.
 	 * @returns a list of paragraph objects
 	 */
 	private detectParagraphs(): Paragraph[] {
@@ -355,14 +358,14 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 		return out;
 	}
 
-	/**Iterates the text of the Etherpad in order to find situations, 
-	 * where several authors are working in one paragraph. 
+	/**Iterates the text of the Etherpad in order to find situations,
+	 * where several authors are working in one paragraph.
 	 * If one author owns more than half of the characters in a paragraph,
-	 * then that author is considered the main contributor. 
+	 * then that author is considered the main contributor.
 	 * All characters from other authors are counted as interaction towards
 	 * the main author. Once such characters have been counted as support to
-	 * the main contributor, these will be flagged "countedAsSupport". 
-	 * This flag ensures that contributions are counted not more than once. 
+	 * the main contributor, these will be flagged "countedAsSupport".
+	 * This flag ensures that contributions are counted not more than once.
 	 */
 	private evaluateSupportActions() {
 		const paragraphs = this.detectParagraphs();
@@ -373,16 +376,16 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 		while (runner && runner.next) {
 
 			if (currentParagraph && charIndex >= currentParagraph.startIndex && charIndex <= currentParagraph.endIndex) {
-				// "runner" is part of a paragraph that contains meaningful text. 
+				// "runner" is part of a paragraph that contains meaningful text.
 				if (currentParagraph.mainContributor !== "" && currentParagraph.mainContributor !== runner.author
 					&& !runner.meta.countedAsSupport) {
 					this.contribCounter.notifyInteraction(runner.author, currentParagraph.mainContributor);
 					runner.meta.countedAsSupport = true;
 				}
 			} else {
-				// "runner" contains a linebreak somewhere between 
+				// "runner" contains a linebreak somewhere between
 				// the paragraphs. So we have to check, if we have to move
-				// to the next paragraph. 
+				// to the next paragraph.
 				while (currentParagraph && charIndex > currentParagraph.endIndex) {
 					currentParagraph = paragraphs[++parIndex];
 				}
@@ -395,9 +398,9 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 
 	/**
 	 * Selects timestamps of Etherpad revision documents from the CouchDB and
-	 * stores them in the stableTimeStamps attribute. 
+	 * stores them in the stableTimeStamps attribute.
 	 * Timestamps will be selected if there were no changes in the Etherpad text
-	 * for at least the timespan defined in the stableTimeStampInterval attribute. 
+	 * for at least the timespan defined in the stableTimeStampInterval attribute.
 	 */
 	private findStableTimeStamps() {
 		let nextIndex = this.listRevStatus + 1;
@@ -406,7 +409,7 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 		while (currentRevData) {
 			const nextRevData = this.dataSource.revData[nextIndex + 1];
 			if (nextRevData && currentRevData.timestamp < nextRevData.timestamp - this.stableTimeStampInterval) {
-				if(!this.stableTimeStamps.includes(currentRevData.timestamp)){
+				if (!this.stableTimeStamps.includes(currentRevData.timestamp)) {
 					this.stableTimeStamps.push(currentRevData.timestamp);
 				}
 			}
@@ -421,11 +424,11 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 	}
 
 	/**
-	 * This method removes the oldest scroll event from the scrollData 
-	 * attribute and checks the characters of paragraphs in this scroll 
+	 * This method removes the oldest scroll event from the scrollData
+	 * attribute and checks the characters of paragraphs in this scroll
 	 * event. All characters from other authors, that hadn´t been seen
 	 * by the user of that scroll event before, will be counted and then
-	 * flagged as seen by this user. 
+	 * flagged as seen by this user.
 	 */
 	private handleScrollEvent() {
 		const scrollEvent = this.scrollData.shift() as ScrollEvent;
@@ -462,9 +465,9 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 
 
 	/**Essentially quite similar to the template from the MinimapService.
-	 * See the comments there for more details. 
-	 * Aside from that, this method makes sure that all evaluation methods 
-	 * will get called appropriately. 
+	 * See the comments there for more details.
+	 * Aside from that, this method makes sure that all evaluation methods
+	 * will get called appropriately.
 	 */
 	private buildList(): void {
 		let nextRev = this.listRevStatus + 1;
@@ -472,18 +475,18 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 		// We are only processing revision docs that were created until the
 		// the newest entry in stableTimeStamps
 		while (this.dataSource.revData[nextRev] &&
-			this.dataSource.revData[nextRev].timestamp <= this.stableTimeStamps[this.stableTimeStamps.length - 1]) {
+		this.dataSource.revData[nextRev].timestamp <= this.stableTimeStamps[this.stableTimeStamps.length - 1]) {
 
 			// We want to evaluate a scroll event exactly in that moment, when the status of the linked list
-			// matches the content of the text editor at the time of that scroll event. 
+			// matches the content of the text editor at the time of that scroll event.
 
 			// Is this rev´s timestamp the newest one that is newer than the timestamp of oldest scroll event?
-			// If the answer is "yes", then we have to evaluate the list right now, .i.e before the list will 
-			// be changed to the next revision. 
-			// "while" is used instead of "if" because there may be several scroll events by different users 
-			// within this timespan. 
+			// If the answer is "yes", then we have to evaluate the list right now, .i.e before the list will
+			// be changed to the next revision.
+			// "while" is used instead of "if" because there may be several scroll events by different users
+			// within this timespan.
 			while (this.scrollData.length > 0 && this.dataSource.revData[nextRev].timestamp > this.scrollData[0].timestamp
-				&& (!this.dataSource.revData[nextRev + 1] || this.dataSource.revData[nextRev + 1].timestamp > this.scrollData[0].timestamp)) {
+			&& (!this.dataSource.revData[nextRev + 1] || this.dataSource.revData[nextRev + 1].timestamp > this.scrollData[0].timestamp)) {
 				this.handleScrollEvent();
 			}
 
@@ -509,7 +512,7 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 			}
 
 			// If the timestamp of this revision was selected as stable timestamp
-			// then the evaluation methods will be called. 
+			// then the evaluation methods will be called.
 			if (this.stableTimeStamps.includes(currentRevData.timestamp)) {
 				this.evaluateSupportActions();
 				this.evaluateSeenBy();
@@ -521,16 +524,16 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 
 	/**
 	 * Inserts characters in the linked list according to the instructions of a changeset
-	 * @param currentOp 
-	 * @param currentRev 
-	 * @param remainingCharbank 
+	 * @param currentOp
+	 * @param currentRev
+	 * @param remainingCharbank
 	 * @returns the charminus minus the characters that were inserted
 	 */
 	private handleAdd(currentOp: Op, currentRev: number, remainingCharbank: string[]) {
 		const author = this.dataSource.revData[currentRev].author;
 		for (let i = 0; i < currentOp.chars; i++) {
 			const char = remainingCharbank.shift();
-			this.list.insertAfterCurrentAndMoveCurrent(char as string, author, { countedAsSupport: false, seenBy: [], seenByEvaluated: 0 });
+			this.list.insertAfterCurrentAndMoveCurrent(char as string, author, {countedAsSupport: false, seenBy: [], seenByEvaluated: 0});
 		}
 		return remainingCharbank;
 	}
@@ -538,11 +541,11 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 	/**
 	 * Executes move instructions from a changeset as well in basic cases.
 	 * Apart from that the method also tests, if a text formatting operation
-	 * was performed. Then this method will also check, if the formatting 
+	 * was performed. Then this method will also check, if the formatting
 	 * affected text that originated from other authors. If so, then this
-	 * will be counted as text interaction. 
-	 * @param currentOp 
-	 * @param currentRev 
+	 * will be counted as text interaction.
+	 * @param currentOp
+	 * @param currentRev
 	 */
 	private handleMove(currentOp: Op, currentRev: number) {
 		if (this.dataSource.attribsToList(currentOp.attribs).length > 0) {
@@ -563,11 +566,11 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber 
 	}
 
 	/**
-	 * Executes a delete operation from a changeset. 
-	 * If the deletion affects characters owned by other 
-	 * authors, this will be counted as text interaction. 
-	 * @param currentOp 
-	 * @param currentRev 
+	 * Executes a delete operation from a changeset.
+	 * If the deletion affects characters owned by other
+	 * authors, this will be counted as text interaction.
+	 * @param currentOp
+	 * @param currentRev
 	 */
 	private handleRemove(currentOp: Op, currentRev: number) {
 		const author = this.dataSource.revData[currentRev].author;

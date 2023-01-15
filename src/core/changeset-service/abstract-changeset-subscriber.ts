@@ -1,5 +1,6 @@
 import logService from "../log/log.service";
 import ChangesetService from "./changeset-service";
+import {Subject} from "../subscriber/subject";
 
 
 /**
@@ -11,7 +12,7 @@ import ChangesetService from "./changeset-service";
  * names to the list in subscribers.ts in order to be instantiated
  * at startup.
  */
-export default abstract class AbstractChangesetSubscriber {
+export default abstract class AbstractChangesetSubscriber<T> extends Subject<T> {
 
 	/**
 	 * This object provides access to the non-private methods
@@ -26,6 +27,7 @@ export default abstract class AbstractChangesetSubscriber {
 	public readonly padName: string
 
 	protected constructor(padName: string) {
+		super();
 		this.dataSource = ChangesetService.instanceRegistry[padName];
 		if (!this.dataSource) {
 			logService.error(AbstractChangesetSubscriber.name, "failed to connect to CSP for " + padName);
@@ -48,6 +50,4 @@ export default abstract class AbstractChangesetSubscriber {
 	 * the last call.
 	 */
 	abstract dataSourceCallback(): void;
-
-
 }

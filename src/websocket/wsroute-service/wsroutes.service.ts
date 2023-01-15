@@ -26,11 +26,16 @@ class WsRouteService {
 		const namespace = server.of(wsRoute.ROUTE);
 		namespace.use(socketIOmoodleUserMiddleware);
 
-		namespace.on("connection", (socket) => {
+		namespace.on("connection", async (socket) => {
 			socket.on("disconnect", (reason) => {
 				wsRoute.disconnectionHandler(socket, reason);
 			})
-			wsRoute.connectionHandler(socket);
+
+			try {
+				await wsRoute.connectionHandler(socket);
+			} catch (e: any) {
+				socket.emit("error", e.message);
+			}
 		});
 	}
 }

@@ -4,7 +4,7 @@ import {RevData} from "../core/changeset-service/rev-data.type";
 import {ActivityDataEntry, ActivityType} from "./activity-data-entry.interface";
 
 
-export default class ActivityProcessor extends AbstractChangesetSubscriber {
+export default class ActivityProcessor extends AbstractChangesetSubscriber<ActivityDataEntry[]> {
 	/**
 	 * Allows access to instances of this class, for example
 	 * when a router wants to pass the generated data to the frontend.
@@ -17,6 +17,10 @@ export default class ActivityProcessor extends AbstractChangesetSubscriber {
 	constructor(padName: string) {
 		super(padName);
 		ActivityProcessor.instances[padName] = this;
+	}
+
+	public getSubjectData(): ActivityDataEntry[] {
+		throw new Error("Method not implemented."); // TODO
 	}
 
 	dataSourceCallback() {

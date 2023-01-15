@@ -7,7 +7,7 @@ import EtherVizList, {EtherVizMeta} from "./etherviz-list";
 import {BasicListNode} from "../core/changeset-service/basic-list";
 import {DateService} from "../core/util/date.service";
 
-export default class EtherVizService extends AbstractChangesetSubscriber {
+export default class EtherVizService extends AbstractChangesetSubscriber<EtherVizList> {
 
 	/**Setting this to 'true' lowers the 'stablePeriod' from one
 	 * hour to one minute and causes some console.log() debug output
@@ -47,6 +47,13 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 		super(padName);
 		this.list = new EtherVizList();
 		EtherVizService.instances[padName] = this;
+	}
+
+	/**
+	 * Returns the data that subscribers should receive.
+	 */
+	public getSubjectData(): EtherVizList {
+		throw new Error("Method not implemented."); // TODO
 	}
 
 	public getEtherVizDataSet() {
@@ -135,7 +142,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber {
 
 	/**
 	 * Will return a DateTimeString formatted by
-	 * the EVA DateService. 
+	 * the EVA DateService.
 	 * Will round to the next full hour if there is
 	 * @param ts milliseconds since 01-01-1970
 	 * @returns a date-time string

@@ -4,7 +4,7 @@ import MinimapList from "./minimap-list";
 import Changeset, {Op} from "../changeset/Changeset";
 import AbstractChangesetSubscriber from "../core/changeset-service/abstract-changeset-subscriber";
 
-export default class MinimapService extends AbstractChangesetSubscriber {
+export default class MinimapService extends AbstractChangesetSubscriber<MiniMapDataUnit[]> {
 	/**
 	 * Allows access to instances of this class, for example
 	 * when a router wants to pass the generated data to the frontend.
@@ -35,6 +35,12 @@ export default class MinimapService extends AbstractChangesetSubscriber {
 		MinimapService.instances[padName] = this;
 	}
 
+	/**
+	 * Returns the data that subscribers should receive.
+	 */
+	public getSubjectData(): MiniMapDataUnit[] {
+		return this.minimapBlocklist;
+	}
 
 	dataSourceCallback(): void {
 		this.buildList();
@@ -47,6 +53,8 @@ export default class MinimapService extends AbstractChangesetSubscriber {
 				}
 			})
 		}
+
+		this.notifySubscribers();
 	}
 
 

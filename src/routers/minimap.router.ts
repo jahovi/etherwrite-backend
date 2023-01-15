@@ -1,74 +1,70 @@
-import Router from "../core/router/router.interface";
-import {Application, Request, Response} from "express";
-import logService from "../core/log/log.service";
-import PadRegistry from "../pads";
 import TrackingService from "../core/tracking-service/tracking-service";
 import MinimapService from "../minimap-service/minimap-service";
+import {Socket} from "socket.io";
+import AbstractWsRoute from "../websocket/wsroute-service/abstract-wsroute";
+import PadRegistry from "../pads";
 
 
-export default class MinimapRouter implements Router {
+export default class MinimapRouter extends AbstractWsRoute {
 
-	private ROUTE = "/minimap";
+	public ROUTE = "/minimap";
 
-	init(app: Application): void {
-		app.get(this.ROUTE + "/blockInfo", this.getBlockInfo);
-		app.get(this.ROUTE + "/scrollPositions", this.getScrollPositions);
-	}
+	private padNameToMinimapService: Record<string, MinimapService> = {};
+	private padNameToTrackingService: Record<string, TrackingService> = {};
 
-
-	/**Delivers the latest block list that the
-	 * corresponding ChangesetProcessor contains.
-	 *
-	 * The block list that the client is NOT guaranteed
-	 * to be congruent to the current status within the
-	 * etherpad text editor.
-	 *
-	 * However internally a call to this endpoint will
-	 * trigger an update and when the same client calls
-	 * again a few seconds later he then will receive a
-	 * newer version of the block list.
-	 *
-	 * @param _req
-	 * @param res
-	 * @returns
+	/**
+	 * Handles a new socket connecting. Initializes its subscriptions for {@link MinimapService} and {@link TrackingService} for the given pad if needed
+	 * and sends a first initial data package.
+	 * @param socket The socket that initializes the connection.
 	 */
-	async getBlockInfo(_req: Request, res: Response): Promise<void> {
-		const padName = _req.query["padName"];
+	public async connectionHandler(socket: Socket): Promise<void> {
+		const padName: string = socket.handshake.query.padName as string;
 		if (!padName) {
-			res.status(400).send("Query parameter \"padName\" is required.");
-			return;
+			throw new Error("Query parameter \"padName\" is required.");
 		}
-		const mmproc = MinimapService.instances[padName.toString()];
-		if (!mmproc) {
-			// padName apparently unknown
-			logService.info(MinimapRouter.name, "could not deliver block info for padName '" + padName + "' to " + _req.ip);
 
-			// maybe there is new pad in the database? let´s check...
-			PadRegistry.initAndUpdate();
+		this.addSocket(padName, socket);
 
-			res.status(404).send([]);
-			return;
+		if (!this.padNameToMinimapService[padName]) {
+			await this.initializeMinimapServiceSubscription(padName);
 		}
-		logService.debug(MinimapRouter.name, "delivered block info for padName '" + padName + "' to " 
-		+ _req.ip + "("+JSON.stringify(mmproc.minimapBlocklist).length + " chars of JSON data)");
-		res.status(200).send(mmproc.minimapBlocklist);
+
+		if (!this.padNameToTrackingService[padName]) {
+			await this.initializeTrackingServiceSubscription(padName);
+		}
+
+		// Emit initial data.
+		socket.emit("update", {
+			blocks: this.padNameToMinimapService[padName].getSubjectData(),
+			scrollPos: this.padNameToTrackingService[padName].getSubjectData(),
+		});
 	}
 
 	/**
-	 *	required parameter: "padName" - the name of the pad
-	 *	Delivers the most recent scroll positions as recorded
-	 *	by the ep-tracking module.
+	 * Creates a new subscription to the {@link MinimapService} to receive updates about the pad text.
+	 * @param padName The name of the pad to start the subscription for.
 	 */
-	async getScrollPositions(_req: Request, res: Response) {
-		const pad = _req.query["padName"] as string;
-		if (!TrackingService.instanceRegistry[pad]) {
-			await PadRegistry.initAndUpdate();
-		}
-		const tService = TrackingService.instanceRegistry[pad];
-		if (tService) {
-			res.status(200).send(tService.miniMapScrollPositions);
-		} else {
-			res.status(404).send({});
-		}
+	private async initializeMinimapServiceSubscription(padName: string): Promise<void> {
+
+		const minimapService: MinimapService = await PadRegistry.getServiceInstance(MinimapService.instances, padName);
+		this.padNameToMinimapService[padName] = minimapService;
+
+		minimapService.subscribe(data => this.emitToAllSockets(padName, {
+			blocks: data,
+		}));
+	}
+
+	/**
+	 * Creates a new subscription to the {@link TrackingService} to receive updates about the user scroll positions.
+	 * @param padName The name of the pad to start the subscription for.
+	 */
+	private async initializeTrackingServiceSubscription(padName: string): Promise<void> {
+
+		const trackingService: TrackingService = await PadRegistry.getServiceInstance(TrackingService.instanceRegistry, padName);
+		this.padNameToTrackingService[padName] = trackingService;
+
+		trackingService.subscribe(data => this.emitToAllSockets(padName, {
+			scrollPos: data,
+		}));
 	}
 }
