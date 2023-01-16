@@ -10,7 +10,7 @@ import logService from "../../core/log/log.service";
 export default abstract class AbstractWsRoute {
 	public abstract readonly ROUTE: string;
 
-	private padNameToSockets: Record<string, Socket[]> = {};
+	protected padNameToSockets: Record<string, Socket[]> = {};
 
 	/**
 	 * Override this to handle the connection of a new socket.

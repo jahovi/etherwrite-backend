@@ -1,20 +1,19 @@
-import {ConstructorOf} from "./constructor-of.interface";
+import { ConstructorOf } from "./constructor-of.interface";
 import CouchDbService from "./core/couch/couch-db.service";
 import AbstractChangesetSubscriber from "./core/changeset-service/abstract-changeset-subscriber";
 import ChangesetService from "./core/changeset-service/changeset-service";
 import subscribers from "./core/changeset-service/subscribers";
 import logService from "./core/log/log.service";
 import TrackingService from "./core/tracking-service/tracking-service";
+import DbChange from "./websocket/dbchange.interface";
 
 export default class PadRegistry {
 
-	private static lastUpdate = 0; /* timestamp that indicates the last update check */
-	private static updateDelay = Number(process.env.PADREG_UPDATE_DELAY) || 5000; /* milliseconds wait time before another check for
-										new pads is allowed */
 	private static docScope = CouchDbService.getConnection("etherpad");
 	private static padNames: string[] = [];
 	private static padIgnoreList: string[] = [];
 	private static ignoreListLength = 0;
+	private static couchDBChangesInit = false;
 
 	/**Call this at startup to initialise the registry.
 	 * Later calls make the PadRegistry look for newly
@@ -22,29 +21,54 @@ export default class PadRegistry {
 	 */
 	public static async initAndUpdate() {
 		PadRegistry.initIgnoreList();
-		const timestamp = Date.now();
-		if (PadRegistry.lastUpdate + PadRegistry.updateDelay > timestamp) {
-			// refusing update if the previous update was not too long ago
-			return;
-		}
 
-		PadRegistry.lastUpdate = timestamp;
 		// fill the list with padnames from the database
 		const pads = await CouchDbService.readView(PadRegistry.docScope, "evahelpers", "detectpadnames");
 		pads.rows.forEach(doc => PadRegistry.insertIfNew(doc.key));
 
 
 		PadRegistry.padNames.forEach((padName) => {
-			if (padName && !ChangesetService.instanceRegistry[padName]) {
-				new ChangesetService(padName.toString());
-				// create instances of all subclasses of AbstractChangesetSubscriber
-				(subscribers as ConstructorOf<AbstractChangesetSubscriber<any>>[]).forEach(subscriber => new subscriber(padName));
-				logService.info(PadRegistry.name, "Created Services for '" + padName + "'");
-			}
-			if (padName && !TrackingService.instanceRegistry[padName]) {
-				new TrackingService(padName);
-			}
+			PadRegistry.createServices(padName);
 		});
+
+
+		// PadRegistry subscribes for changes that indicate a newly inserted pad
+		if (!PadRegistry.couchDBChangesInit) {
+			CouchDbService.subscribeChanges(PadRegistry.docScope, (change: DbChange) => {
+
+				// The padName is located after "pad2readonly:" in the change.id
+				const newPadName = change.id.substring(13);
+				if(PadRegistry.insertIfNew(newPadName)){
+					PadRegistry.createServices(newPadName);
+				}
+			},
+			{
+				selector: {
+					_id: {
+						$gte: "pad2readonly:",
+						$lte: "pad2readonly;",
+					},
+				},
+			})
+			PadRegistry.couchDBChangesInit = true;
+		}
+	}
+
+	/**Starts the instantiation of a ChangesetService, TrackingService
+	 * and the services inheriting from AbstractChangesetSubscriber for
+	 * the pad with the given name. 
+	 * @param padName 
+	 */
+	private static createServices(padName:string): void{
+		if (padName && !ChangesetService.instanceRegistry[padName]) {
+			new ChangesetService(padName.toString());
+			// create instances of all subclasses of AbstractChangesetSubscriber
+			(subscribers as ConstructorOf<AbstractChangesetSubscriber<any>>[]).forEach(subscriber => new subscriber(padName));
+			logService.info(PadRegistry.name, "Created Services for '" + padName + "'");
+		}
+		if (padName && !TrackingService.instanceRegistry[padName]) {
+			new TrackingService(padName);
+		}
 	}
 
 	/**
@@ -58,29 +82,32 @@ export default class PadRegistry {
 	public static async getServiceInstance<T>(instances: Record<string, T>, padName: string): Promise<T> {
 
 		let serviceInstance = instances[padName];
+		let attempt = 0;
+		while (!serviceInstance && attempt < 150) {
+			// Give the newly created services some time to initialise
+			// The current maximum wait period is 150 * 100 ms = 15 seconds
+			await new Promise(resolve => setTimeout(resolve, 100));
+			serviceInstance = instances[padName];
+			attempt++;
+		}
 
 		if (!serviceInstance) {
-			// maybe there is new pad in the database? let´s check...
-			await PadRegistry.initAndUpdate();
-
-			serviceInstance = instances[padName];
-
-			if (!serviceInstance) {
-				// padName apparently unknown
-				throw new Error(`Pad "${padName}" not found.`);
-			}
+			// padName apparently unknown
+			throw new Error(`Pad "${padName}" not found.`);
 		}
 
 		return serviceInstance;
 	}
 
-	private static insertIfNew(name: string) {
+	private static insertIfNew(name: string): boolean {
 		if (!PadRegistry.padNames.includes(name)) {
 			if (!PadRegistry.padIgnoreList.includes(name)) {
 				PadRegistry.padNames.push(name);
 				logService.debug(PadRegistry.name, "Found pad: '" + name + "'");
+				return true;
 			}
 		}
+		return false;
 	}
 
 	private static initIgnoreList() {

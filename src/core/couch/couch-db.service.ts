@@ -1,4 +1,4 @@
-import nano, {DocumentScope, DocumentViewParams, DocumentViewResponse, MaybeDocument, ViewDocument} from "nano";
+import nano, {ChangesReaderOptions, DocumentScope, DocumentViewParams, DocumentViewResponse, MaybeDocument, ViewDocument} from "nano";
 import logService from "../log/log.service";
 import {MaybeRevisionedViewDocument} from "./maybe-revisioned-view-document.type";
 import DbChangeCallback from "../../websocket/dbchange-callback.interface";
@@ -94,10 +94,10 @@ export class CouchDbService {
 	 * @param db The database connection to work with.
 	 * @param callback Function to be called on each change in the db.
 	 */
-	public subscribeChanges(db: DocumentScope<any>, callback: DbChangeCallback): void {
+	public subscribeChanges(db: DocumentScope<any>, callback: DbChangeCallback, options: ChangesReaderOptions = {}): void {
 		// Apparently, nothing is actually created or started by changesReader.start. It just returns
 		// an EventEmitter to register listeners with the allways existing and running changesReader.
-		const changesReader = db.changesReader.start({});
+		const changesReader = db.changesReader.start(options);
 		changesReader.on("error", (err) => {
 			logService.error(CouchDbService.name, `Fatal error in db changes reader: ${err}`);
 		});
