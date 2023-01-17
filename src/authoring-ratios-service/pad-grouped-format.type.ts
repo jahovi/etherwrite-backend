@@ -23,3 +23,9 @@ export type PadGroupedFormat = Record<string, {
 	colors: string[];
 }>;
 
+export type AuthoringRatios = {
+	authors: string[];
+	moodleIDs: string[];
+	ratios: number[];
+	colors: string[];
+};

@@ -2,7 +2,9 @@ import {DocumentViewResponse} from "nano";
 import couchDbService from "../core/couch/couch-db.service";
 import AuthorRegistry from "../core/authors/author-registry";
 import LogService from "../core/log/log.service";
-import {PadGroupedFormat} from "./pad-grouped-format.type";
+import {AuthoringRatios, PadGroupedFormat} from "./pad-grouped-format.type";
+import PadRegistry from "../pads";
+import MinimapService from "../minimap-service/minimap-service";
 
 /**
  * Class to retrieve data about number of characters by each author and total characters in each pad from the db,
@@ -14,6 +16,39 @@ export default class AuthoringRatiosCalculator {
 
 	public constructor() {
 		this.dbConnection = couchDbService.getConnection("etherpad");
+	}
+
+
+	public async calculate(padName: string): Promise<AuthoringRatios> {
+		const minimapService: MinimapService = await PadRegistry.getServiceInstance(MinimapService.instances, padName);
+		const blocks = minimapService.getSubjectData();
+
+		// calculate authoring ratios
+		const totalNumChars = blocks
+			.map(block => block.blockLength)
+			.reduce((acc, curr) => acc + curr);
+
+		const authors = [...new Set(blocks.map(block => block.author))];
+
+		const ratios = []
+		for (let i = 0; i <= authors.length; i++) {
+			let numChars = 0;
+			for (const block of blocks) {
+				if (block.author === authors[i]) {
+					numChars += block.blockLength;
+				}
+			}
+			ratios[i] = 0;
+			if (totalNumChars !== 0) {
+				ratios[i] = Number((numChars / totalNumChars * 100).toFixed(2));
+			}
+		}
+
+		const colors = authors.map(author => AuthorRegistry.knownAuthors[author].color);
+		const moodleIDs = authors.map(author => AuthorRegistry.knownAuthors[author].mapper2author)
+		const usernames = authors.map(author => AuthorRegistry.knownAuthors[author].epalias) // epalias is in fact the moodle username
+		console.log({ authors: usernames, moodleIDs: moodleIDs, ratios: ratios, colors: colors });
+		return { authors: usernames, moodleIDs: moodleIDs, ratios: ratios, colors: colors };
 	}
 
 	/**
