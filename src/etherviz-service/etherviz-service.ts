@@ -1,238 +1,240 @@
 import AbstractChangesetSubscriber from "../core/changeset-service/abstract-changeset-subscriber";
-import Changeset, {Op} from "../changeset/Changeset";
+import Changeset, { Op } from "../changeset/Changeset";
 import CSRaw from "../core/changeset-service/csraw.interface";
-import {EtherVizColumn, EtherVizColumnItem} from "./etherviz-interfaces";
+import { EtherVizColumn, EtherVizColumnItem } from "./etherviz-interfaces";
 import AuthorRegistry from "../core/authors/author-registry";
-import EtherVizList, {EtherVizMeta} from "./etherviz-list";
-import {BasicListNode} from "../core/changeset-service/basic-list";
-import {DateService} from "../core/util/date.service";
+import EtherVizList, { EtherVizMeta } from "./etherviz-list";
+import { BasicListNode } from "../core/changeset-service/basic-list";
+import { DateService } from "../core/util/date.service";
 
-export default class EtherVizService extends AbstractChangesetSubscriber<EtherVizList> {
+/**
+ * This Service will create the data needed for drawing the
+ * EtherVizDiagram. 
+ * There will be a status column (consisting of an array of rectangles)
+ * for each day since the creation of the Etherpad. Between each two
+ * neighboring status columns there is usually a transitional column 
+ * (consisting of an array of parallelograms) that indicates from which
+ * to which location individual characters from the pad text have moved. 
+ * The transitional column may be empty if no common characters are present
+ * in a pair of neighboring status columns. 
+ */
+export default class EtherVizService extends AbstractChangesetSubscriber<EtherVizColumn[]> {
 
-	/**Setting this to 'true' lowers the 'stablePeriod' from one
-	 * hour to one minute and causes some console.log() debug output
-	 * (see the dataSourceCallback method for details)
-	 *
-	 * Affects the timeStampToDate Method too.
-	 */
-	private static debugOutput = false;
 	public static instances: Record<string, EtherVizService> = {};
+	private static debug = process.env.ETHERVIZ_DEBUG === "true";
 
-	private static milSecInHour = 1000 * 60 * 60;
-
-	/**Suspends the mechanism to round timeStamps to full hours */
-	private static dontRoundToFullHours = process.env.ETHERVIZ_DONT_ROUND_TO_FULL_HOURS == "true";
-
-	/** milliseconds - the time that has to pass without new changesets
-	before a timestamp is eligible as starting point for new status block  */
-	private static stablePeriod = EtherVizService.debugOutput ? 60000 : EtherVizService.milSecInHour; // one minute or one hour
+	private static milSecInDay = 1000 * 60 * 60 * 24;
 
 	/**Contains the linked list that is evaluated at the
 	 * chosen stable timestamp moments.
 	 */
-	private list: EtherVizList;
+	private permanentList: EtherVizList;
 
+	/**
+	 * Contains the timestamps of the millisecond when a past day has ended. 
+	 */
+
+	private startOfDayTimestamps: number[] = [];
 	/*Contains the chosen timestamps in ascending order*/
-	private stableTimestamps: number[] = []
+	private chosenTimestamps: number[] = [];
 
-	/* Forces the reduction of starting points for new status blocks */
-	private maxTimeStamps = Number(process.env.ETHERVIZ_MAX_STATUS_BLOCKS) || 12;
-	private latestRev = -1;
-
-	private ethervizDataSet: EtherVizColumn[] = []
-	private dataSetTimeStamp = 0;
-	private updateDelay = 60000;
+	/**
+	 * This contains all data up until yesterday. 
+	 * The status for the current day will be generated and added
+	 * dynamically from the most recent pad content, 
+	 * whenever the method getEtherVizDataSet() is called. 
+	 */
+	private ethervizPermanentDataSet: EtherVizColumn[] = [];
 
 	constructor(padName: string) {
 		super(padName);
-		this.list = new EtherVizList();
+		this.permanentList = new EtherVizList();
 		EtherVizService.instances[padName] = this;
 	}
 
 	/**
 	 * Returns the data that subscribers should receive.
 	 */
-	public getSubjectData(): EtherVizList {
-		throw new Error("Method not implemented."); // TODO
+	public getSubjectData(): EtherVizColumn[] {
+		return this.getEtherVizDataSet();
 	}
 
+	/**
+	 * Appends to the permanently saved data the data
+	 * for the current day and status of the pad content. 
+	 * @returns The EtherVizColumn [] required for drawing the EtherVizDiagram
+	 */
 	public getEtherVizDataSet() {
-		if (Date.now() > this.dataSetTimeStamp + this.updateDelay) {
-			this.buildOutputData();
-		}
-		return this.ethervizDataSet;
+		this.expandPermanentData();
+		const outputEtherVizDataSet = JSON.parse(JSON.stringify(this.ethervizPermanentDataSet)) as EtherVizColumn[];
+		const listCopy = this.permanentList.copy();
+
+		const newestRev = this.dataSource.padInfo?.value.head as number;
+		const latestRevDataTimeStamp = this.dataSource.revData[newestRev].timestamp;
+		const startOfCurrentDayTimeStamp = this.getStartOfDayTimestamp(Date.now());
+
+		// Provisionally add these timestamps:
+		this.chosenTimestamps.push(latestRevDataTimeStamp);
+		this.startOfDayTimestamps.push(startOfCurrentDayTimeStamp);
+
+		this.buildOutputData(listCopy, latestRevDataTimeStamp, outputEtherVizDataSet);
+
+
+		// Remove the provisional timestamps
+		this.chosenTimestamps.pop();
+		this.startOfDayTimestamps.pop();
+
+		return outputEtherVizDataSet;
 	}
 
 	dataSourceCallback(): void {
-		const padHead = this.dataSource.padInfo ? this.dataSource.padInfo?.value.head : 0;
-		if (padHead > this.latestRev) {
-			this.latestRev = padHead;
-			this.findStableTimestamps();
-		}
-		//debug output
-		if (EtherVizService.debugOutput) {
-			if (Date.now() > this.dataSetTimeStamp + this.updateDelay) {
-				this.buildOutputData();
-				this.getEtherVizDataSet();
-			}
-			console.log("pad: " + this.padName);
-			this.ethervizDataSet.forEach(columnSet => {
-				console.log(columnSet.dateTime);
-				console.log("rectangles");
-				console.log(columnSet.rectangles);
-				console.log("parallelograms");
-				console.log(columnSet.parallelograms);
-			});
-			const d = this.getEtherVizDataSet();
-			console.log(d.length);
+		this.expandPermanentData();
+
+		if (EtherVizService.debug) {
+			this.printDebugOutput();
 		}
 	}
 
-
-	/* Searches in the changesets for stable timestamps.
-	A timestamp is considered stable when there were no new
-	changesets after the current one for at least the timespan
-	that is defined in the 'stablePeriod' attribute */
-	private findStableTimestamps(): void {
-		this.stableTimestamps = [];
-		for (let i = 1; i < this.latestRev; i++) {
-			const ts1 = this.dataSource.revData[i].timestamp;
-			const ts2 = this.dataSource.revData[i + 1].timestamp;
-			if (ts2 - ts1 > EtherVizService.stablePeriod) {
-				this.stableTimestamps.push(ts1);
-			}
-		}
-		// the very latest status of the pad will always be used
-		const latestTimeStamp = this.dataSource.revData[this.latestRev].timestamp;
-		if (!this.stableTimestamps.includes(latestTimeStamp)) {
-			this.stableTimestamps.push(latestTimeStamp);
-		}
-
-		// remove entries as long as maximum is exceeded
-		while (this.stableTimestamps.length > this.maxTimeStamps) {
-			this.shrinkStableTimestamps();
-		}
+	private printDebugOutput(): void {
+		this.getEtherVizDataSet().forEach(columnSet => {
+			console.log(columnSet.dateTime);
+			console.log("rectangles");
+			console.log(columnSet.rectangles);
+			console.log("parallelograms");
+			console.log(columnSet.parallelograms);
+		});
 	}
+
 
 	/**
-	 * Removes an element from stableTimeStamps.
-	 * The removed element lies between two other
-	 * elements that have the lowest distance between
-	 * each other.
+	 * This methods first builds or expands the startOfDayTimestamps
+	 * and chosenTimestamps attributes and then tries to build or expand
+	 * the permanentList, from which then the permanentDataSet will be built
+	 * or expanded. 
+	 * 
 	 */
-	private shrinkStableTimestamps(): void {
-		if (this.stableTimestamps.length < 3) {
+	private expandPermanentData(): void {
+		const creationTimestamp = this.dataSource.revData[0].timestamp;
+		const startOfCreationDayTimestamp = this.getStartOfDayTimestamp(creationTimestamp);
+
+		// Build up of permanent list will not happen 
+		// before the day after the creation of the pad.
+		if (Date.now() < startOfCreationDayTimestamp + EtherVizService.milSecInDay) {
 			return;
 		}
-		let minIndex = 1;
-		let minDist = this.stableTimestamps[2] - this.stableTimestamps[0];
-		for (let i = 1; i < this.stableTimestamps.length - 2; i++) {
-			const dist = this.stableTimestamps[i + 2] - this.stableTimestamps[i];
-			if (dist < minDist) {
-				minIndex = i + 1;
-				minDist = dist;
-			}
+		// Initialise the first element
+		if (this.startOfDayTimestamps.length === 0) {
+			this.startOfDayTimestamps.push(startOfCreationDayTimestamp);
 		}
-		for (let i = minIndex; i < this.stableTimestamps.length - 1; i++) {
-			this.stableTimestamps[i] = this.stableTimestamps[i + 1];
-		}
-		this.stableTimestamps.pop();
 
+		// Insert more "start of day" timestamps until yesterday
+		let latestTimestamp = this.startOfDayTimestamps[this.startOfDayTimestamps.length - 1];
+		while (Date.now() > latestTimestamp + 2 * EtherVizService.milSecInDay) {
+			latestTimestamp += EtherVizService.milSecInDay;
+			this.startOfDayTimestamps.push(latestTimestamp);
+		}
+
+		// Fill the chosenTimestamps
+		for (let i = this.chosenTimestamps.length ; i < this.startOfDayTimestamps.length; i++) {
+			// Inserting the largest revData timestamp that happened 
+			// up to 24 hours after the timestamp from the beginning of that day
+			this.chosenTimestamps.push(this.findMaxTimestamp(this.startOfDayTimestamps[i] + EtherVizService.milSecInDay));
+		}
+
+		this.buildOutputData(this.permanentList, this.chosenTimestamps[this.chosenTimestamps.length - 1], this.ethervizPermanentDataSet);
 	}
 
 	/**
-	 * Will return a DateTimeString formatted by
-	 * the EVA DateService.
-	 * Will round to the next full hour if there is
-	 * @param ts milliseconds since 01-01-1970
-	 * @returns a date-time string
+	 * @param limit The timestamp that must no be exceeded
+	 * @returns The maximum timestamp in revData, that is smaller than the limit
 	 */
-	static timeStampToDateString(ts: number): string {
-		if (!this.debugOutput && !EtherVizService.dontRoundToFullHours && ts + EtherVizService.stablePeriod < Date.now()) {
-			const remainder = ts % EtherVizService.milSecInHour;
-			const fillTime = EtherVizService.milSecInHour - remainder;
-			const roundedTs = ts + fillTime;
-			return DateService.formatDateTime(new Date(roundedTs));
-		} else {
-			return DateService.formatDateTime(new Date(ts));
+	private findMaxTimestamp(limit: number): number {
+		let revIndex = this.dataSource.padInfo ? this.dataSource.padInfo?.value.head : 0;
+		while (revIndex > 0 && this.dataSource.revData[revIndex].timestamp > limit) {
+			revIndex--;
 		}
+		return this.dataSource.revData[revIndex].timestamp;
 	}
 
-	/**Generates and updates the linked list.
-	 * Must be called every time when new data
-	 * has arrived from the database.
+	/**
+	 * @param ts An UTC timestamp
+	 * @returns The timestamp of the beginning of ts´s day in local timezone
 	 */
-	private buildOutputData(): void {
-		// we want to build the list from the newest rev that we haven't processed yet.
-		let nextRev = 0;
-		this.list.eraseAllNodes();
-		this.ethervizDataSet.length = 0;
-		while (this.dataSource.revData[nextRev]) {
-			this.list.setToHead();
-			// we are going through all new revs that we previously pulled from the database
+	private getStartOfDayTimestamp(ts: number): number {
+		const time = ts % EtherVizService.milSecInDay;
+		const timeZoneOffset = new Date(ts - time).getTimezoneOffset() * 60 * 1000;
+		return ts - time + timeZoneOffset;
+	}
+
+	/**
+	 * 
+	 * @param list The instance of EtherVizList, that is to be updated
+	 * @param maxTimestamp The timestamp of a rev data object. No revs newer than this shall be inserted
+	 * @param outputDataSet The instance of EtherVizColumn [], that is to be filled
+	 */
+	private buildOutputData(list: EtherVizList, maxTimestamp: number, outputDataSet: EtherVizColumn[]): void {
+		while (list.listRevStatus >= 0 && this.chosenTimestamps[outputDataSet.length] === this.dataSource.revData[list.listRevStatus].timestamp) {
+			this.buildStatusBlock(list, outputDataSet);
+		}
+
+		let nextRev = list.listRevStatus + 1;
+		while (this.dataSource.revData[nextRev] && this.dataSource.revData[nextRev].timestamp <= maxTimestamp) {
+			list.setToHead();
 			const currentRevData = this.dataSource.revData[nextRev];
-			// bring the data in a more comfortable shape.
-			// ops may contain zero or more operations
 			const ops: Generator<Op> = Changeset.deserializeOps(currentRevData.cset.ops);
 
-			// pick up the first operation in ops
 			let op = ops.next();
 
-			// each op that inserts or removes something usually
-			// is preceded by an op to move to a certain position
-			// in the list.
-
-			// charBank contains the characters to be inserted (if any)
 			let newChars = currentRevData.cset.charBank.split("");
 			while (op.value) {
-				// op.value contains something, therefore we are evaluating it
 				const currentOp = op.value;
 				switch (currentOp.opcode) {
 
-				// we need to insert one or more characters
 				case "+":
-					newChars = this.handleAdd(currentOp, nextRev, newChars);
+					newChars = this.handleAdd(list, currentOp, nextRev, newChars);
 					break;
 
-					// this op instructs us to move to a certain position
 				case "=":
-					this.handleMove(currentOp);
+					this.handleMove(list, currentOp);
 					break;
 
-					// we have to remove a number of chars
 				case "-":
-					this.handleRemove(currentOp, nextRev);
+					this.handleRemove(list, currentOp, nextRev);
 					break;
 				}
-				// let´s look at the next op in this set
 				op = ops.next();
 			}
-
-			if (this.stableTimestamps.includes(currentRevData.timestamp)) {
+			while (this.chosenTimestamps[outputDataSet.length] === currentRevData.timestamp) {
 
 				// The current changeset timestamp has been chosen to be
-				// the basis for one of our status blocks
-				this.buildStatusBlock(currentRevData);
+				// the basis for the status block of the day. 
+				// Since it´s possible that there are no changes for
+				// a longer period of time, it may be necessary to evluate
+				// the current revision several times in order to get 
+				// the data needed for each day since the creation of the pad. 
+
+				this.buildStatusBlock(list, outputDataSet);
 
 			}
 
 			// this revs-dataset is finished. Move to the next one...
 			nextRev++;
 		}
+		list.listRevStatus = nextRev - 1;
 	}
 
 	/** Generates a status block from the current content of
 	 * the linked list. Will generate a transitional block too,
 	 * if this isn´t the first status block.
 	 */
-	private buildStatusBlock(currentRevData: { cset: Changeset.Changeset; author: string; timestamp: number; }): void {
-		const timeStampIndex = this.stableTimestamps.indexOf(currentRevData.timestamp);
+	private buildStatusBlock(list: EtherVizList, etherVizDataSet: EtherVizColumn[]): void {
+		const timeStampIndex = etherVizDataSet.length;
 
-		// create meta tags for this timeStampIndex
+		// Create meta tags for this timeStampIndex
 		// and a status block
 		let index = 0;
-		let runner = this.list.head.next;
-		let author = this.list.head.next?.author as string;
+		let runner = list.head.next;
+		let author = list.head.next?.author as string;
 		let authorRecord = AuthorRegistry.knownAuthors[author];
 		let color = authorRecord.color;
 		let currentBlock: EtherVizColumnItem = {
@@ -241,12 +243,12 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 			upperLeft: 0,
 			lowerLeft: -1,
 		};
-		const list = [];
+		const statusBlock = [];
 		while (runner && runner.next) {
 			if (runner.author != author) {
-				// close block
-				list.push(currentBlock);
-				// reinitialise
+				// Close block
+				statusBlock.push(currentBlock);
+				// Reinitialise
 				author = runner.author;
 				authorRecord = AuthorRegistry.knownAuthors[author];
 
@@ -264,19 +266,20 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 			runner = runner.next;
 			index++;
 		}
-		// close final block
+		// Close final block
 		currentBlock.lowerLeft = --index;
-		list.push(currentBlock);
+		statusBlock.push(currentBlock);
 
-		const dateString = EtherVizService.timeStampToDateString(currentRevData.timestamp);
-		const entry: EtherVizColumn = {dateTime: dateString, rectangles: list};
+		const dateString = DateService.formatDate(new Date(this.startOfDayTimestamps[timeStampIndex]));
 
-		this.ethervizDataSet.push(entry);
+		const entry: EtherVizColumn = { dateTime: dateString, rectangles: statusBlock };
 
-		// create transitional block
+		etherVizDataSet.push(entry);
+
+		// Create transitional block
 		if (timeStampIndex > 0) {
-			// collect nodes that appear in both status blocks
-			let runner = this.list.head.next as BasicListNode<EtherVizMeta>;
+			// Collect nodes that appear in both status blocks
+			let runner = list.head.next as BasicListNode<EtherVizMeta>;
 			const commonNodes: typeof runner[] = [];
 			while (runner && runner.next) {
 				if (timeStampIndex in runner.meta && (timeStampIndex - 1) in runner.meta) {
@@ -286,7 +289,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 			}
 
 			if (commonNodes.length > 0) {
-				// prepare first element of parallelograms list
+				// Prepare first element of parallelograms list
 				const nodeZero = commonNodes[0] as BasicListNode<EtherVizMeta>;
 				let author = nodeZero.author;
 				let authorRecord = AuthorRegistry.knownAuthors[author];
@@ -313,10 +316,10 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 					const node = commonNodes[i];
 					const nodeLRDiff = (node.meta[timeStampIndex - 1]) - (node.meta[timeStampIndex]);
 					if (node && node.author != currentBlock.authorId || nodeLRDiff != offset) {
-						// close block because the author has changed and/or
+						// Close block because the author has changed and/or
 						// the offset has changed
 						parallelograms.push(currentBlock);
-						// reinitialise
+						// Reinitialise
 						author = node.author;
 						authorRecord = AuthorRegistry.knownAuthors[author];
 						color = authorRecord.color;
@@ -335,43 +338,42 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 						currentBlock.lowerRight = (currentBlock.lowerRight as number) + 1;
 					}
 				}
-				//close final block
+				// Close final block
 				parallelograms.push(currentBlock);
-				this.ethervizDataSet[timeStampIndex - 1]["parallelograms"] = parallelograms;
+				etherVizDataSet[timeStampIndex - 1]["parallelograms"] = parallelograms;
 			}
 		}
-		this.dataSetTimeStamp = Date.now();
 	}
 
-	private handleAdd(currentOp: Op, currentRev: number, remainingCharbank: string[]) {
-		let author: string; // the etherpad id
+	private handleAdd(list: EtherVizList, currentOp: Op, currentRev: number, remainingCharbank: string[]) {
+		let author: string;
 		try {
-			// trying to find author in attribs
+			// Trying to find author in attribs
 			const authorKey = this.dataSource.extractAuthorKeyFromAttribs(currentOp.attribs);
 			author = this.dataSource.getFromNumToAttrib(authorKey, 1);
 		} catch (e) {
-			// else use author data from revdata
+			// Else use author data from revdata
 			author = this.dataSource.revData[currentRev].author;
 		}
 		for (let i = 0; i < currentOp.chars; i++) {
 			const char = remainingCharbank.shift();
-			this.list.insertAfterCurrentAndMoveCurrent(char as string, author, {});
+			list.insertAfterCurrentAndMoveCurrent(char as string, author, {});
 		}
 		return remainingCharbank;
 	}
 
-	private handleMove(currentOp: Op) {
-		this.list.moveFwd(currentOp.chars);
+	private handleMove(list: EtherVizList, currentOp: Op) {
+		list.moveFwd(currentOp.chars);
 	}
 
-	private handleRemove(currentOp: Op, currentRev: number) {
+	private handleRemove(list: EtherVizList, currentOp: Op, currentRev: number) {
 		const currentRevData = this.dataSource.revData[currentRev];
 		const rawRevData = currentRevData.cset as CSRaw;
 		if (rawRevData.newLen == 1) {
-			this.list.eraseAllNodes();
+			list.eraseAllNodes();
 		} else {
 			for (let i = 0; i < currentOp.chars; i++) {
-				this.list.removeAfterCurrent();
+				list.removeAfterCurrent();
 			}
 		}
 	}

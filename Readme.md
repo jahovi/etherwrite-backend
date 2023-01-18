@@ -22,7 +22,7 @@ COUCH_DB_PORT=5984
 CSP_UPDATE_DELAY=5000
 
 TRS_UPDATE_DELAY=2000
-ETHERVIZ_MAX_STATUS_BLOCKS=12
+ETHERVIZ_DEBUG=true
 PADS_IGNORE= 
 ```
 PADS_IGNORE can be filled with one or more names of pads, separated by commas. These will be ignored by EVA Services that are launched by the pad registry. 
