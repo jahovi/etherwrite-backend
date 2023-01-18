@@ -1,7 +1,7 @@
 import { Application, Request, Response } from "express";
 import AuthoringRatiosCalculator from "../authoring-ratios-service/authoring-ratios-calculator";
 import Router from "../core/router/router.interface";
-import { AuthoringRatios, PadGroupedFormat } from "../authoring-ratios-service/pad-grouped-format.type";
+import { AuthoringRatios } from "../authoring-ratios-service/authoring-ratios.type";
 
 /**
  * This endpoint uses an instance of AuthoringRatiosCalculator to calculate and return authoring ratios for each pad.
@@ -60,25 +60,30 @@ export default class AuthoringRatiosRouter implements Router {
 		if (pad) {
 			// return data for given pad
 			authoringRatiosCalculator.calculate(pad).then((authoringRatios) => {
-				if (res.locals.user.isModerator) {
-					// if current user is a moderator, return the full data set
-					res.status(200).send(authoringRatios)
+				if (authoringRatios) {
+					if (res.locals.user.isModerator) {
+						// if current user is a moderator, return the full data set
+						res.status(200).send(authoringRatios)
+					} else {
+						// if current user is not a moderator: construct result object containing author, ID, ratio and color
+						// data for the current user and aggregated data for other authors
+						const usersMoodleId: string = res.locals.user.userId.toString();
+						const result = aggregateRatiosOfOtherUsers(authoringRatios, usersMoodleId);
+						res.status(200).send(result)
+					}
 				} else {
-					// if current user is not a moderator: construct result object containing author, ID, ratio and color
-					// data for the current user and aggregated data for other authors
-					const usersMoodleId: string = res.locals.user.userId.toString();
-					const result = aggregateRatiosOfOtherUsers(authoringRatios, pad, usersMoodleId);
-					res.status(200).send(result)
+					// authoring ratios calculator returned nothing
+					res.send({
+						authors: [],
+						moodleIDs: [],
+						ratios: [],
+						colors: [],
+					})
 				}
 			});
 		} else {
-			res.send({
-				authors: [],
-				moodleIDs: [],
-				ratios: [],
-				colors: [],
-			})
-
+			// pad not specified
+			res.status(400).send("Query parameter \"pad\" is required.");
 		}
 	}
 }
@@ -134,7 +139,7 @@ export default class AuthoringRatiosRouter implements Router {
 // 		ratios: [currentUserRatio, aggregateRatioOfOtherUsers],
 // 		colors: [currentUserColor, otherUsersColor],
 // 	};
-function aggregateRatiosOfOtherUsers(authoringRatios: AuthoringRatios, pad: string, usersMoodleId: string) {
+function aggregateRatiosOfOtherUsers(authoringRatios: AuthoringRatios, usersMoodleId: string) {
 	const numberOfUsers = authoringRatios.ratios.length;
 	if (numberOfUsers === 0) {
 		return {
