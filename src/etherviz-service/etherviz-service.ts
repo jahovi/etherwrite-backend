@@ -229,11 +229,17 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 	 */
 	private buildStatusBlock(list: EtherVizList, etherVizDataSet: EtherVizColumn[]): void {
 		const timeStampIndex = etherVizDataSet.length;
+		const dateString = DateService.formatDate(new Date(this.startOfDayTimestamps[timeStampIndex]));
 
 		// Create meta tags for this timeStampIndex
 		// and a status block
 		let index = 0;
 		let runner = list.head.next;
+		if(runner === list.tail){
+			// Pad is currently empty
+			etherVizDataSet.push({dateTime: dateString, rectangles:[]});
+			return;
+		}
 		let author = list.head.next?.author as string;
 		let authorRecord = AuthorRegistry.knownAuthors[author];
 		let color = authorRecord.color;
@@ -270,7 +276,6 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 		currentBlock.lowerLeft = --index;
 		statusBlock.push(currentBlock);
 
-		const dateString = DateService.formatDate(new Date(this.startOfDayTimestamps[timeStampIndex]));
 
 		const entry: EtherVizColumn = { dateTime: dateString, rectangles: statusBlock };
 
