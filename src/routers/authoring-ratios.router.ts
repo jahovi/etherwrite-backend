@@ -98,6 +98,16 @@ function aggregateRatiosOfOtherUsers(authoringRatios: AuthoringRatios, usersMood
 		};
 	}
 
+	if (userIndex === -1) {
+		// no ratio for current user since they haven't written anything
+		return {
+			authors: [`${numberOfUsers} Andere`],
+			moodleIDs: [null],
+			ratios: [aggregateRatioOfOtherUsers],
+			colors: [otherUsersColor],
+		}
+	}
+
 	return {
 		authors: [currentUserAuthor, `${numberOfUsers - 1} Andere`],
 		moodleIDs: [usersMoodleId, null],
