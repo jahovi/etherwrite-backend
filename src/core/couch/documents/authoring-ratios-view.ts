@@ -4,14 +4,14 @@ declare const emit: any;
 
 DesignDocumentService.register({
 	/**
-	 * Design document containing views to retrieve data to calculate authoring ratios.
+	 * Design document containing views to retrieve data about pad content and author colors
 	 * 
-	 * {@view author_colors} can be queried via /etherpad/_design/authoring_ratios/_view/author_colors and returns a list of dicts with the author as the key
-	 * and the color as the value
+	 * Query via /etherpad/_design/authoring_ratios/_view/VIEWNAME
 	 */
 	_id: "_design/authoring_ratios",
 	views: {
 		text_per_pad: {
+			// Returns a row for each pad, with the pad name as the key and and the text as the value
 			map: function(doc) {
 				const regexPadDoc = /^pad:\w+$/;
 				if (regexPadDoc.test(doc._id)) {
@@ -39,6 +39,7 @@ DesignDocumentService.register({
 			}
 		},
 		author_colors: {
+			// Returns a row for each pad, with the author id as the key and the color as the value
 			map: function(doc) {
 				const regexGlobalAuthorDoc = /^globalAuthor:/;
 				if (regexGlobalAuthorDoc.test(doc._id)) {
