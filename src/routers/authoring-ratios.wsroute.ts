@@ -1,11 +1,12 @@
 import { Socket } from "socket.io";
+import aggregateRatiosOfOtherUsers from "../authoring-ratios-service/aggregate-ratios.function";
 import AuthoringRatiosCalculator from "../authoring-ratios-service/authoring-ratios-calculator";
 import { AuthoringRatios } from "../authoring-ratios-service/authoring-ratios.type";
 import logService from "../core/log/log.service";
 import MinimapService from "../minimap-service/minimap-service";
 import PadRegistry from "../pads";
 import AbstractWsRoute from "../websocket/wsroute-service/abstract-wsroute";
-import { aggregateRatiosOfOtherUsers } from "./authoring-ratios.router";
+// import { aggregateRatiosOfOtherUsers } from "./authoring-ratios.router";
 
 export default class AuthoringRatiosWsRoute extends AbstractWsRoute {
 	public readonly ROUTE = "/authoring_ratios_ws";
