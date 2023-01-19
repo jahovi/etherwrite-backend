@@ -62,7 +62,7 @@ export default class AuthoringRatiosRouter implements Router {
  * @param usersMoodleId the moodle id of the current user
  * @returns aggregated authoring ratios
  */
-function aggregateRatiosOfOtherUsers(authoringRatios: AuthoringRatios, usersMoodleId: string) {
+export function aggregateRatiosOfOtherUsers(authoringRatios: AuthoringRatios, usersMoodleId: string) {
 	const numberOfUsers = authoringRatios.ratios.length;
 	if (numberOfUsers === 0) {
 		return {

@@ -2,6 +2,7 @@ import AuthorRegistry from "../core/authors/author-registry";
 import PadRegistry from "../pads";
 import MinimapService from "../minimap-service/minimap-service";
 import { AuthoringRatios } from "./authoring-ratios.type";
+import { MiniMapDataUnit } from "../minimap-service/mini-map-data-unit.type";
 
 /**
  * Class to retrieve data about number of characters by each author and total characters in each pad from the db,
@@ -21,6 +22,40 @@ export default class AuthoringRatiosCalculator {
 	public async calculate(padName: string): Promise<AuthoringRatios> {
 		const minimapService: MinimapService = await PadRegistry.getServiceInstance(MinimapService.instances, padName);
 		const blocks = minimapService.getSubjectData();
+		const authors = [...new Set(blocks.map(block => block.author))];
+		const colors = authors.map(author => AuthorRegistry.knownAuthors[author].color);
+		const moodleIDs = authors.map(author => AuthorRegistry.knownAuthors[author].mapper2author)
+		const usernames = authors.map(author => AuthorRegistry.knownAuthors[author].epalias) // epalias is in fact the moodle username
+
+		// calculate authoring ratios
+		const totalNumChars = blocks
+			.map(block => block.blockLength)
+			.reduce((acc, curr) => acc + curr, 0);
+
+		const ratios = []
+		for (let i = 0; i < authors.length; i++) {
+			let numChars = 0;
+			for (const block of blocks) {
+				if (block.author === authors[i]) {
+					numChars += block.blockLength;
+				}
+			}
+			ratios[i] = 0;
+			if (totalNumChars !== 0) {
+				ratios[i] = Number((numChars / totalNumChars * 100).toFixed(2));
+			}
+		}
+
+		return { authors: usernames, moodleIDs: moodleIDs, ratios: ratios, colors: colors };
+	}
+
+	/**
+	 * Calculates authoring ratios from minimap block data.
+	 * 
+	 * @param blocks Minimap block data
+	 * @returns Authoring ratios calculated from block data
+	 */
+	public static calculateFromBlocks(blocks: MiniMapDataUnit[]): AuthoringRatios {
 		const authors = [...new Set(blocks.map(block => block.author))];
 		const colors = authors.map(author => AuthorRegistry.knownAuthors[author].color);
 		const moodleIDs = authors.map(author => AuthorRegistry.knownAuthors[author].mapper2author)
