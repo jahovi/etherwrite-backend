@@ -23,6 +23,11 @@ CSP_UPDATE_DELAY=5000
 
 TRS_UPDATE_DELAY=2000
 ETHERVIZ_DEBUG=true
+
+COH_FORMAT_EDITING_VALUE=5
+COH_DELETE_VALUE=0.2
+COH_PERCEPTION_DATA_WEIGHT=0.5
+
 PADS_IGNORE= 
 ```
 PADS_IGNORE can be filled with one or more names of pads, separated by commas. These will be ignored by EVA Services that are launched by the pad registry. 
@@ -201,6 +206,10 @@ NodeConnection {
 	intensity: number 
 }
 ```
+
+The node distance value (i.e. the dist property in NodeDistance) is guaranteed to be a decimal in the range between 0.2 and 1.  
+
+The intensity property in NodeConnection is always a decimal between 0 and 1. 
 
 ## Websockets
 

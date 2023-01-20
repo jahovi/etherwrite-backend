@@ -1,15 +1,14 @@
 import CouchDbService from "../couch/couch-db.service";
 import ChangesetService from "../changeset-service/changeset-service";
-import {MiniMapScrollPos} from "./minimapscrollpos.type";
-import {StructuredTrackingData} from "./structured-tracking-data-type";
-import {TrackingData} from "./trackingdata-type";
+import { MiniMapScrollPos } from "./minimapscrollpos.type";
+import { StructuredTrackingData } from "./structured-tracking-data-type";
+import { TrackingData } from "./trackingdata-type";
 import AuthorRegistry from "../authors/author-registry";
 import CohesionDiagramService from "../../coh-service/coh-service";
-import {DateService} from "../util/date.service";
-import {LoginData, ScrollEvent} from "./coh-interfaces";
-import {Subject} from "../subscriber/subject";
+import { DateService } from "../util/date.service";
+import { LoginData, ScrollEvent } from "./coh-interfaces";
+import { Subject } from "../subscriber/subject";
 import DbChange from "../../websocket/dbchange.interface";
-import DbDocs from "../../websocket/dbdocs";
 
 
 /**
@@ -23,15 +22,6 @@ export default class TrackingService extends Subject<MiniMapScrollPos> {
 	/** Stores the instances of this class under the corresponding pad names*/
 	public static instanceRegistry: Record<string, TrackingService> = {};
 	private static docScope = CouchDbService.getConnection("etherpad");
-
-	/**The timestamp of the latest db entry that was read */
-	private static latestTimestamp = 0;
-
-	/**Indicates whether there were new entries for that specific pad found */
-	private updateRequired = true;
-
-	/** The amount of milliseconds that passes, before a general update of data occurs*/
-	private static updateDelay = Number(process.env.TRS_UPDATE_DELAY) || 2000;
 
 	/** The name of the pad, for which this instance provides services*/
 	public readonly pad: string;
@@ -47,6 +37,8 @@ export default class TrackingService extends Subject<MiniMapScrollPos> {
 
 	private cohesDiagService: CohesionDiagramService;
 	private scrollEvents: ScrollEvent[] = [];
+
+	private static authors = new Set<string>();
 
 	constructor(pad: string) {
 		super();
@@ -68,25 +60,47 @@ export default class TrackingService extends Subject<MiniMapScrollPos> {
 	 */
 	public static async initAndUpdate() {
 		await TrackingService.getAndDistributeDatabaseEntries();
+		await TrackingService.activateInstances();
 		CouchDbService.subscribeChanges(this.docScope, async (change: DbChange) => {
-			if (DbDocs.tracking.test(change.id)) {
-				await TrackingService.getAndDistributeDatabaseEntries();
-				Object.keys(TrackingService.instanceRegistry).forEach(padName => {
-					if (TrackingService.instanceRegistry[padName].updateRequired) {
-						const instance = TrackingService.instanceRegistry[padName];
-						instance.buildStructuredPadData();
-						instance.sendCohServiceData();
-						instance.generateMiniMapScrollPositions();
-						instance.updateRequired = false;
-						instance.notifySubscribers();
-					}
-				});
+			const doc = change.doc as { _id: string, value: TrackingData };
+			if (doc.value && doc.value.pad) {
+				TrackingService.testAndRestoreTimeStamp(doc.value, doc._id);
+				if (doc.value.user && !TrackingService.authors.has(doc.value.user)) {
+					TrackingService.authors.add(doc.value.user);
+					AuthorRegistry.put(doc.value.user);
+				}
+				const instance = TrackingService.instanceRegistry[doc.value.pad];
+				if (instance) {
+					instance.padData.push(doc.value);
+					instance.processData();
+				}
 			}
+
+		},
+		{
+			selector: {
+				_id: {
+					$gte: "tracking:",
+					$lte: "tracking;",
+				},
+			},
+			includeDocs: true,
 		})
 	}
 
-	public static getUpdateDelay() {
-		return TrackingService.updateDelay;
+	private static async activateInstances() {
+		Object.keys(TrackingService.instanceRegistry).forEach(padName => {
+			const instance = TrackingService.instanceRegistry[padName];
+			instance.processData();
+
+		});
+	}
+
+	private processData(): void {
+		this.buildStructuredPadData();
+		this.sendCohServiceData();
+		this.generateMiniMapScrollPositions();
+		this.notifySubscribers();
 	}
 
 	private sendCohServiceData() {
@@ -120,10 +134,10 @@ export default class TrackingService extends Subject<MiniMapScrollPos> {
 						// We will make an assumption that the logout may have happened an hour after the login.
 						assumedLogout += 3600000;
 					}
-					loginData.push({user: id, login: login, logout: assumedLogout})
+					loginData.push({ user: id, login: login, logout: assumedLogout })
 				} else {
 					// Data seems plausible
-					loginData.push({user: id, login: dataset.loginTimestamps.shift() as number, logout: dataset.logoutTimestamps.shift() as number});
+					loginData.push({ user: id, login: dataset.loginTimestamps.shift() as number, logout: dataset.logoutTimestamps.shift() as number });
 				}
 			}
 		});
@@ -156,15 +170,9 @@ export default class TrackingService extends Subject<MiniMapScrollPos> {
 							topIndex: dataEntry.lastTabScrolling.state.top.index,
 							bottomIndex: dataEntry.lastTabScrolling.state.bottom.index,
 						};
-					} else {
-						// console.log(dataEntry.lastTabScrolling.time + " < " + dataEntry.lastDisconnected.time);
-					}
-				} else {
-					// console.log("no tab scroll detected");
-				}
-			} else {
-				// console.log(author+" not connected");
-			}
+					} 
+				} 
+			} 
 		});
 		this.miniMapScrollPositions = out;
 	}
@@ -187,9 +195,10 @@ export default class TrackingService extends Subject<MiniMapScrollPos> {
 			return strData;
 		}
 
-		data.forEach(entry => {
+		while (data.length > 0) {
+			const entry = data.shift() as TrackingData;
 			if (!strData[entry.user]) {
-				strData[entry.user] = {loginTimestamps: [], logoutTimestamps: []};
+				strData[entry.user] = { loginTimestamps: [], logoutTimestamps: [] };
 			}
 
 			const userdata = strData[entry.user];
@@ -245,8 +254,7 @@ export default class TrackingService extends Subject<MiniMapScrollPos> {
 				break;
 			}
 			}
-		});
-		this.structuredTrackingData = strData;
+		}
 	}
 
 	/**
@@ -255,41 +263,47 @@ export default class TrackingService extends Subject<MiniMapScrollPos> {
 	 * instance of TrackingService, if the timestamp of
 	 * those tracking files is newer. The data will be stored
 	 * in the padData property of the instances.
+	 * This method should only be called once at startup. 
+	 * All later Tracking events are handled by the CouchDB change
+	 * subscription. 
 	 */
 	private static async getAndDistributeDatabaseEntries() {
 		const data = await CouchDbService.readView(TrackingService.docScope, "evahelpers", "fetchtrackingdata",
-			{start_key: "tracking:" + (TrackingService.latestTimestamp + 1)});
+			{ start_key: "tracking:0", end_key: "tracking:99999999999999" });
 		const storage: Record<string, TrackingData[]> = {};
 		Object.keys(TrackingService.instanceRegistry).forEach(padName => {
 			storage[padName] = [];
 		});
-		let maxTimestamp = 0;
 		data.rows.forEach(doc => {
 			const content = doc.value as TrackingData;
-			AuthorRegistry.put(content.user);
+			this.authors.add(content.user);
+			TrackingService.testAndRestoreTimeStamp(content, doc.id);
 
-			if (!content.time) {
-				let timeStampPart = doc.key.substring(9);
-				timeStampPart = timeStampPart.substring(0, timeStampPart.indexOf(":"));
-				content.time = Number(timeStampPart);
-			}
-			const date = new Date(0);
-			date.setUTCMilliseconds(content.time);
-			content.debugtime = DateService.formatDateTime(date);
-			maxTimestamp = content.time > maxTimestamp ? content.time : maxTimestamp;
 			if (storage[content.pad]) {
 				storage[content.pad].push(content);
 			}
 		});
-		if (maxTimestamp > TrackingService.latestTimestamp) {
-			TrackingService.latestTimestamp = maxTimestamp;
-		}
+
+		TrackingService.authors.forEach(author => {
+			AuthorRegistry.put(author);
+		});
+
 		Object.keys(storage).forEach(padName => {
-			if (storage[padName].length > 0) {
-				TrackingService.instanceRegistry[padName].padData = storage[padName];
-				TrackingService.instanceRegistry[padName].updateRequired = true;
-			}
+			storage[padName].forEach(entry => {
+				TrackingService.instanceRegistry[padName].padData.push(entry);
+			});
 		})
+	}
+
+	private static testAndRestoreTimeStamp(content: TrackingData, id: string) {
+		if (!content.time) {
+			let timeStampPart = id.substring(28);
+			timeStampPart = timeStampPart.substring(0, timeStampPart.indexOf(":"));
+			content.time = Number(timeStampPart);
+		}
+		const date = new Date(0);
+		date.setUTCMilliseconds(content.time);
+		content.debugtime = DateService.formatDateTime(date);
 	}
 
 }

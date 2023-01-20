@@ -9,14 +9,14 @@ import { DateService } from "../core/util/date.service";
 
 /**
  * This Service will create the data needed for drawing the
- * EtherVizDiagram. 
+ * EtherVizDiagram.
  * There will be a status column (consisting of an array of rectangles)
  * for each day since the creation of the Etherpad. Between each two
- * neighboring status columns there is usually a transitional column 
+ * neighboring status columns there is usually a transitional column
  * (consisting of an array of parallelograms) that indicates from which
- * to which location individual characters from the pad text have moved. 
+ * to which location individual characters from the pad text have moved.
  * The transitional column may be empty if no common characters are present
- * in a pair of neighboring status columns. 
+ * in a pair of neighboring status columns.
  */
 export default class EtherVizService extends AbstractChangesetSubscriber<EtherVizColumn[]> {
 
@@ -31,7 +31,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 	private readonly permanentList: EtherVizList;
 
 	/**
-	 * Contains the timestamps of the millisecond when a past day has ended. 
+	 * Contains the timestamps of the millisecond when a past day has ended.
 	 */
 
 	private readonly startOfDayTimestamps: number[] = [];
@@ -39,10 +39,10 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 	private readonly chosenTimestamps: number[] = [];
 
 	/**
-	 * This contains all data up until yesterday. 
+	 * This contains all data up until yesterday.
 	 * The status for the current day will be generated and added
-	 * dynamically from the most recent pad content, 
-	 * whenever the method getEtherVizDataSet() is called. 
+	 * dynamically from the most recent pad content,
+	 * whenever the method getEtherVizDataSet() is called.
 	 */
 	private readonly ethervizPermanentDataSet: EtherVizColumn[] = [];
 
@@ -61,7 +61,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 
 	/**
 	 * Appends to the permanently saved data the data
-	 * for the current day and status of the pad content. 
+	 * for the current day and status of the pad content.
 	 * @returns The EtherVizColumn [] required for drawing the EtherVizDiagram
 	 */
 	public getEtherVizDataSet() {
@@ -110,14 +110,14 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 	 * This methods first builds or expands the startOfDayTimestamps
 	 * and chosenTimestamps attributes and then tries to build or expand
 	 * the permanentList, from which then the permanentDataSet will be built
-	 * or expanded. 
-	 * 
+	 * or expanded.
+	 *
 	 */
 	private expandPermanentData(): void {
 		const creationTimestamp = this.dataSource.revData[0].timestamp;
 		const startOfCreationDayTimestamp = this.getStartOfDayTimestamp(creationTimestamp);
 
-		// Build up of permanent list will not happen 
+		// Build up of permanent list will not happen
 		// before the day after the creation of the pad.
 		if (Date.now() < startOfCreationDayTimestamp + EtherVizService.milSecInDay) {
 			return;
@@ -136,7 +136,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 
 		// Fill the chosenTimestamps
 		for (let i = this.chosenTimestamps.length; i < this.startOfDayTimestamps.length; i++) {
-			// Inserting the largest revData timestamp that happened 
+			// Inserting the largest revData timestamp that happened
 			// up to 24 hours after the timestamp from the beginning of that day
 			this.chosenTimestamps.push(this.findMaxTimestamp(this.startOfDayTimestamps[i] + EtherVizService.milSecInDay));
 		}
@@ -167,7 +167,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 	}
 
 	/**
-	 * 
+	 *
 	 * @param list The instance of EtherVizList, that is to be updated
 	 * @param maxTimestamp The timestamp of a rev data object. No revs newer than this shall be inserted
 	 * @param outputDataSet The instance of EtherVizColumn [], that is to be filled
@@ -207,11 +207,11 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 			while (this.chosenTimestamps[outputDataSet.length] === currentRevData.timestamp) {
 
 				// The current changeset timestamp has been chosen to be
-				// the basis for the status block of the day. 
+				// the basis for the status block of the day.
 				// Since it´s possible that there are no changes for
 				// a longer period of time, it may be necessary to evluate
-				// the current revision several times in order to get 
-				// the data needed for each day since the creation of the pad. 
+				// the current revision several times in order to get
+				// the data needed for each day since the creation of the pad.
 
 				this.buildStatusBlock(list, outputDataSet);
 
