@@ -23,8 +23,11 @@ class ActivityService {
 		// Get activity data.
 		let activityProcessor = ActivityProcessor.instances[padName];
 		if (!activityProcessor) {
-			await PadRegistry.initAndUpdate();
-			activityProcessor = ActivityProcessor.instances[padName];
+			try {
+				activityProcessor = await PadRegistry.getServiceInstance(ActivityProcessor.instances, padName);
+			} catch {
+				return [];
+			}
 		}
 
 		const blockList: ActivityDataEntry[] = activityProcessor.blockList;
