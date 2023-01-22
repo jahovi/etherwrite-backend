@@ -53,7 +53,7 @@ knows. Be sure to request this regularly to be informed about eventual color cha
     mapper2author: string
   }
 }
-````
+```
 
 epid -- etherpad id  
 epalias -- the alias name, that the author may or may not have entered in the etherpad text editor  
@@ -63,38 +63,17 @@ is such a file in the couchdb for this etherpad id.
 
 ### /authoring_ratios
 
-Returns as json an object containing corresponding authors, moodle IDs, authoring ratios and colors for each pad. The ratios are given 
-as percentages rounded to two decimal places. Without arguments data for all pads is returned. 
-If the current user is not a moderator calls without a pad argument will be denied.
+Returns as json an object containing corresponding authors, moodle IDs, authoring ratios and colors for the pad provided as an argument (`pad=PADNAME`). The ratios are given 
+as percentages rounded to two decimal places. If the current user is a moderator, individual users' values will be returned. Example:
 
 Example:
 
 ```js
 {
-  nameOfFirstPad: { 
     authors: [nameAuthor1, nameAuthor2, ...],
     moodleIDs: [moodleIDAuthor1, moodleIDAuthor2, ...],
     ratios: [anteilAutor1, anteilAutor2, ...],
     colors: [farbeAutor1, farbeAutor2, ...]
-  }
-  nameOfSecondPad: {
-    authors: [nameAuthor1, nameAuthor2, ...],
-    moodleIDs: [moodleIDAuthor1, moodleIDAuthor2, ...],
-    ratios: [ratioAutor1, ratioAutor2, ...],
-    colors: [colorAutor1, colorAutor2, ...]
-  }
-  ...
-}
-```
-
-With an argument of `pad=PADNAME`, only data for the specified pad will be returned. If the current user is a moderator, individual users' values will be returned. Example:
-
-```js
-{
-  authors: [nameAuthor1, nameAuthor2, ...],
-  moodleIDs: [moodleIDAuthor1, moodleIDAuthor2, ...],
-  ratios: [anteilAutor1, anteilAutor2, ...],
-  colors: [farbeAutor1, farbeAutor2, ...]
 }
 ```
 
@@ -264,3 +243,7 @@ The data in "scrollPos" will be structured as follows:
 ```
 
 Please note that updates will only be sent regarding authors that can be assumed to currently have openend that pad. I.e. users, for which ep-tracking has a disconnect event that is newer than the latest connect event or the latest scroll event, will be excluded.  
+
+### /authoring_ratios_ws
+
+Open a socket.io connection to "authoring_ratios_ws" with a parameter `padName` to the receive the same data as provided by the endpoint `authoring_ratios` as it comes in.
