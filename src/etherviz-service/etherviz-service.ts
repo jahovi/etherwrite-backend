@@ -20,23 +20,23 @@ import { DateService } from "../core/util/date.service";
  */
 export default class EtherVizService extends AbstractChangesetSubscriber<EtherVizColumn[]> {
 
-	public static instances: Record<string, EtherVizService> = {};
-	private static debug = process.env.ETHERVIZ_DEBUG === "true";
+	public static readonly instances: Record<string, EtherVizService> = {};
+	private static readonly debug = process.env.ETHERVIZ_DEBUG === "true";
 
-	private static milSecInDay = 1000 * 60 * 60 * 24;
+	private static readonly milSecInDay = 1000 * 60 * 60 * 24;
 
 	/**Contains the linked list that is evaluated at the
 	 * chosen stable timestamp moments.
 	 */
-	private permanentList: EtherVizList;
+	private readonly permanentList: EtherVizList;
 
 	/**
 	 * Contains the timestamps of the millisecond when a past day has ended. 
 	 */
 
-	private startOfDayTimestamps: number[] = [];
+	private readonly startOfDayTimestamps: number[] = [];
 	/*Contains the chosen timestamps in ascending order*/
-	private chosenTimestamps: number[] = [];
+	private readonly chosenTimestamps: number[] = [];
 
 	/**
 	 * This contains all data up until yesterday. 
@@ -44,7 +44,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 	 * dynamically from the most recent pad content, 
 	 * whenever the method getEtherVizDataSet() is called. 
 	 */
-	private ethervizPermanentDataSet: EtherVizColumn[] = [];
+	private readonly ethervizPermanentDataSet: EtherVizColumn[] = [];
 
 	constructor(padName: string) {
 		super(padName);
@@ -135,7 +135,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 		}
 
 		// Fill the chosenTimestamps
-		for (let i = this.chosenTimestamps.length ; i < this.startOfDayTimestamps.length; i++) {
+		for (let i = this.chosenTimestamps.length; i < this.startOfDayTimestamps.length; i++) {
 			// Inserting the largest revData timestamp that happened 
 			// up to 24 hours after the timestamp from the beginning of that day
 			this.chosenTimestamps.push(this.findMaxTimestamp(this.startOfDayTimestamps[i] + EtherVizService.milSecInDay));
@@ -145,7 +145,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 	}
 
 	/**
-	 * @param limit The timestamp that must no be exceeded
+	 * @param limit The timestamp that must not be exceeded
 	 * @returns The maximum timestamp in revData, that is smaller than the limit
 	 */
 	private findMaxTimestamp(limit: number): number {
@@ -235,9 +235,9 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 		// and a status block
 		let index = 0;
 		let runner = list.head.next;
-		if(runner === list.tail){
+		if (runner === list.tail) {
 			// Pad is currently empty
-			etherVizDataSet.push({dateTime: dateString, rectangles:[]});
+			etherVizDataSet.push({ dateTime: dateString, rectangles: [] });
 			return;
 		}
 		let author = list.head.next?.author as string;

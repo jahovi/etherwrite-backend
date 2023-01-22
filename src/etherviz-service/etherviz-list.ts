@@ -28,7 +28,6 @@ export default class EtherVizList extends BasicList<EtherVizMeta>{
 			console.log(runner.content + " " + runner.author);
 			if (Object.keys(runner.meta).length > 0) {
 				Object.keys(runner.meta).forEach(key => {
-					//
 					console.log(key + "  " + runner.meta[Number(key)]);
 				})
 			}

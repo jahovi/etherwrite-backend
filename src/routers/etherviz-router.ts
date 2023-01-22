@@ -18,16 +18,16 @@ export default class EtherVizRouter implements Router {
 			res.status(400).send("Query parameter \"padName\" is required.");
 			return;
 		}
-		let evproc = EtherVizService.instances[padName.toString()];
-		if (!evproc) {
-			await PadRegistry.initAndUpdate();
-			evproc = EtherVizService.instances[padName.toString()];
+		let evService = EtherVizService.instances[padName];
+		if (!evService) {
+			try {
+				evService = await PadRegistry.getServiceInstance(EtherVizService.instances, padName);
+			} catch {
+				res.status(404).send([]);
+			}
 		}
-		if (!evproc) {
-			res.status(404).send([]);
-			return;
-		}
+
 		logService.debug(EtherVizRouter.name, "delivered data for '" + padName + "' to " + _req.ip);
-		res.status(200).send(evproc.getEtherVizDataSet());
+		res.status(200).send(evService.getEtherVizDataSet());
 	}
 }
