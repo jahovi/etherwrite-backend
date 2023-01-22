@@ -95,7 +95,7 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 	that is defined in the 'stablePeriod' attribute */
 	private findStableTimestamps(): void {
 		this.stableTimestamps = [];
-		for (let i = 1; i < this.latestRev; i++) {
+		for (let i = 1; i < this.latestRev - 1; i++) {
 			const ts1 = this.dataSource.revData[i].timestamp;
 			const ts2 = this.dataSource.revData[i + 1].timestamp;
 			if (ts2 - ts1 > EtherVizService.stablePeriod) {
