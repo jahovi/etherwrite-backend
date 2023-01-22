@@ -20,12 +20,19 @@ export default class AuthoringRatiosCalculator {
 	 * @returns an object containing corresponding arrays of usernames, moodleIDs, ratios, colors
 	 */
 	public async calculate(padName: string): Promise<AuthoringRatios> {
-		const minimapService: MinimapService = await PadRegistry.getServiceInstance(MinimapService.instances, padName);
+		let minimapService = MinimapService.instances[padName];
+		if (!minimapService) {
+			try {
+				minimapService = await PadRegistry.getServiceInstance(MinimapService.instances, padName);
+			} catch {
+				return { authors: [], moodleIDs: [], ratios: [], colors: [] };
+			}
+		}
 		const blocks = minimapService.getSubjectData();
 		const authors = [...new Set(blocks.map(block => block.author))];
 		const colors = authors.map(author => AuthorRegistry.knownAuthors[author].color);
 		const moodleIDs = authors.map(author => AuthorRegistry.knownAuthors[author].mapper2author)
-		const usernames = authors.map(author => AuthorRegistry.knownAuthors[author].epalias) // epalias is in fact the moodle username
+		const usernames = authors.map(author => AuthorRegistry.knownAuthors[author].epalias)
 
 		// calculate authoring ratios
 		const totalNumChars = blocks
