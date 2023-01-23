@@ -27,7 +27,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
 	cors: {
 		// allow cors requests from the frontend
-		origin: "http://localhost:8081",
+		origin: process.env.ALLOW_ORIGIN,
 	},
 });
 wsRouteService.initWsRoutes(io);
