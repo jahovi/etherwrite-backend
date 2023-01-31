@@ -48,27 +48,6 @@ Execute request `GET localhost:8083/dbtest?dbname=<your db name>` to test databa
 
 ## Endpoints
 
-### /authors
-
-Execute request `GET localhost:8083/authors` to receive an object containing information about all authors EVA currently 
-knows. Be sure to request this regularly to be informed about eventual color changes by the authors. 
-
-```js
-{
-  [epid: string]: {
-    epalias:string;
-    color: string;
-    mapper2author: string
-  }
-}
-```
-
-epid -- etherpad id  
-epalias -- the alias name, that the author may or may not have entered in the etherpad text editor  
-color: -- the color that is associated with this author according to the database  
-mapper2author -- delivers the 'XX' from the mapper2author:XX files in couchdb that is assigned to the etherpad id of this author, IF there
-is such a file in the couchdb for this etherpad id.
-
 ### /authoring_ratios
 
 Returns as json an object containing corresponding authors, moodle IDs, authoring ratios and colors for the pad provided as an argument (`pad=PADNAME`). The ratios are given 
@@ -259,3 +238,25 @@ Please note that updates will only be sent regarding authors that can be assumed
 ### /authoring_ratios_ws
 
 Open a socket.io connection to "authoring_ratios_ws" with a parameter `padName` to the receive the same data as provided by the endpoint `authoring_ratios` as it comes in.
+
+### /wsauthors
+
+Open a socket.io connection to "wsauthors" to receive an object containing information about all authors EVA currently 
+knows. Any updates, for example when an authors changes his color or when a new authors enters an Etherpad for the first time, will be 
+pushed in an "update" event by this websocket.  
+
+```js
+{
+  [epid: string]: {
+    epalias:string;
+    color: string;
+    mapper2author: string
+  }
+}
+```
+
+epid -- etherpad id  
+epalias -- the alias name, that the author may or may not have entered in the etherpad text editor. This information should only be used for debugging purposes. If you are looking for the real names of authors, use the frontend´s VuexStore instead. 
+color: -- the color that is associated with this author according to the database  
+mapper2author -- delivers the 'XX' from the mapper2author:XX files in couchdb that is assigned to the etherpad id of this author, IF there
+is such a file in the couchdb for this etherpad id.
