@@ -248,7 +248,7 @@ pushed in an "update" event by this websocket.
 ```js
 {
   [epid: string]: {
-    epalias:string;
+    epalias: string;
     color: string;
     mapper2author: string
   }
