@@ -241,8 +241,8 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 			return;
 		}
 		let author = list.head.next?.author as string;
-		let authorRecord = AuthorRegistry.knownAuthors[author];
-		let color = authorRecord.color;
+		let authorRecord = AuthorRegistry.getInstance().knownAuthors[author];
+		let color = authorRecord.color ? authorRecord.color : "#0";
 		let currentBlock: EtherVizColumnItem = {
 			authorId: author,
 			authorColor: color,
@@ -256,9 +256,9 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 				statusBlock.push(currentBlock);
 				// Reinitialise
 				author = runner.author;
-				authorRecord = AuthorRegistry.knownAuthors[author];
+				authorRecord = AuthorRegistry.getInstance().knownAuthors[author];
 
-				color = authorRecord.color;
+				color = authorRecord.color ? authorRecord.color : "#0";
 				currentBlock = {
 					authorId: author,
 					authorColor: color,
@@ -297,8 +297,8 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 				// Prepare first element of parallelograms list
 				const nodeZero = commonNodes[0] as BasicListNode<EtherVizMeta>;
 				let author = nodeZero.author;
-				let authorRecord = AuthorRegistry.knownAuthors[author];
-				let color = authorRecord.color;
+				let authorRecord = AuthorRegistry.getInstance().knownAuthors[author];
+				let color = authorRecord.color ? authorRecord.color : "#0";
 				let currentBlock: EtherVizColumnItem = {
 					authorId: author,
 					authorColor: color,
@@ -326,8 +326,8 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 						parallelograms.push(currentBlock);
 						// Reinitialise
 						author = node.author;
-						authorRecord = AuthorRegistry.knownAuthors[author];
-						color = authorRecord.color;
+						authorRecord = AuthorRegistry.getInstance().knownAuthors[author];
+						color = authorRecord.color ? authorRecord.color : "#0";
 						currentBlock = {
 							authorId: author,
 							authorColor: color,

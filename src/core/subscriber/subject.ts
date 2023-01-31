@@ -3,7 +3,7 @@
  */
 export abstract class Subject<T> {
 
-	private subscriberCallbacks: Function[] = [];
+	protected subscriberCallbacks: Function[] = [];
 
 	/**
 	 * This has to be overridden with a method returning the actual data. This is how the Subject knows what to communicate to subscribers.
@@ -18,6 +18,19 @@ export abstract class Subject<T> {
 	public subscribe(callback: (data?: T) => void): T {
 		this.subscriberCallbacks.push(callback);
 		return this.getSubjectData();
+	}
+
+	/**
+	 * Removes the callback function from the subject´s callback list. 
+	 * @param callback The callback function to be removed
+	 */
+	public unsubscribe(callback: Function) {
+		for (let i = 0; i < this.subscriberCallbacks.length;i++) {
+			if (this.subscriberCallbacks[i] === callback) {
+				this.subscriberCallbacks.splice(i,1);
+				return;
+			}
+		}
 	}
 
 	/**

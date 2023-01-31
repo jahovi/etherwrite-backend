@@ -53,7 +53,6 @@ export default class MinimapService extends AbstractChangesetSubscriber<MiniMapD
 				}
 			})
 		}
-
 		this.notifySubscribers();
 	}
 

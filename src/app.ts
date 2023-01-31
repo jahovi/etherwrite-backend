@@ -8,17 +8,31 @@ import PadRegistry from "./pads";
 import AuthorRegistry from "./core/authors/author-registry";
 import TrackingService from "./core/tracking-service/tracking-service";
 import http from "http";
-import {Server} from "socket.io";
+import { Server } from "socket.io";
 import wsRouteService from "./websocket/wsroute-service/wsroutes.service";
+import cors from "cors";
 
 dotenv.config();
 
 const app = express();
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const cors = require("cors");
-app.use(cors());
+
+if (process.env.ALLOW_ORIGIN && (process.env.ALLOW_ORIGIN.includes("localhost") || process.env.ALLOW_ORIGIN.includes("127.0.0.1"))) {
+	app.use(cors());
+}
 
 const port = process.env.PORT || 8083;
+
+
+
+// Update or create necessary documents.
+designDocumentService.registerAllDocuments()
+	// Initialise the author registry to get all global authors.
+	.then(() => AuthorRegistry.getInstance())
+	// prepare ChangesetProcessors for all known pads.
+	.then(() => PadRegistry.initAndUpdate())
+	// start TrackingService
+	.then(() => TrackingService.initAndUpdate());
+
 
 routerService.init(app);
 
@@ -31,22 +45,9 @@ const io = new Server(server, {
 	},
 });
 wsRouteService.initWsRoutes(io);
-
-// Update or create necessary documents.
-designDocumentService.registerAllDocuments()
-	// Initialise the author registry to get all global authors.
-	.then(() => AuthorRegistry.init())
-	// prepare ChangesetProcessors for all known pads.
-	.then(() => PadRegistry.initAndUpdate())
-	// start TrackingService
-	.then(() => TrackingService.initAndUpdate())
-	// initialise the server.
-	.then(() => server.listen(port, () => {
-		logService.info("EVA", `Listening on port ${port}!`);
-	}));
-
-
-
+server.listen(port, () => {
+	logService.info("EVA", `Listening on port ${port}!`);
+});
 
 
 

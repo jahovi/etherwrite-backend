@@ -170,11 +170,11 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber<
 		// for each author.
 		const nodes: Node[] = [];
 		authors.forEach(author => {
-			const authorData = AuthorRegistry.knownAuthors[author];
+			// const authorData = AuthorRegistry.getInstance().knownAuthors[author];
 			nodes.push({
 				id: author,
-				name: authorData.epalias,
-				color: authorData.color,
+				// name: authorData.epalias,
+				// color: authorData.color,
 			})
 		});
 

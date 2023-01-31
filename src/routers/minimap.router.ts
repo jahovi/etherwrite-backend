@@ -1,6 +1,6 @@
 import TrackingService from "../core/tracking-service/tracking-service";
 import MinimapService from "../minimap-service/minimap-service";
-import {Socket} from "socket.io";
+import { Socket } from "socket.io";
 import AbstractWsRoute from "../websocket/wsroute-service/abstract-wsroute";
 import PadRegistry from "../pads";
 
@@ -18,13 +18,25 @@ export default class MinimapRouter extends AbstractWsRoute {
 	 * @param socket The socket that initializes the connection.
 	 */
 	public async connectionHandler(socket: Socket): Promise<void> {
-		const padName: string = socket.handshake.query.padName as string;
-		if (!padName) {
-			throw new Error("Query parameter \"padName\" is required.");
+
+		// The frontend is expected to emit a "padName" event at 
+		// the beginning of the connection. 
+		let padName = "";
+		socket.on("padName", pName => {
+			padName = pName;
+		});
+
+		let attempts = 0
+		while (attempts < 50 && padName === "") {
+			await new Promise(resolve => setTimeout(resolve, 10));
+			attempts++;
+		}
+
+		if (padName === "") {
+			throw new Error("\"padName\" event is missing.");
 		}
 
 		this.addSocket(padName, socket);
-
 		if (!this.padNameToMinimapService[padName]) {
 			await this.initializeMinimapServiceSubscription(padName);
 		}
@@ -49,9 +61,7 @@ export default class MinimapRouter extends AbstractWsRoute {
 		const minimapService: MinimapService = await PadRegistry.getServiceInstance(MinimapService.instances, padName);
 		this.padNameToMinimapService[padName] = minimapService;
 
-		minimapService.subscribe(data => this.emitToAllSockets(padName, {
-			blocks: data,
-		}));
+		minimapService.subscribe(data => { this.emitToAllSockets(padName, { blocks: data }) });
 	}
 
 	/**
@@ -63,8 +73,6 @@ export default class MinimapRouter extends AbstractWsRoute {
 		const trackingService: TrackingService = await PadRegistry.getServiceInstance(TrackingService.instanceRegistry, padName);
 		this.padNameToTrackingService[padName] = trackingService;
 
-		trackingService.subscribe(data => this.emitToAllSockets(padName, {
-			scrollPos: data,
-		}));
+		trackingService.subscribe(data => { this.emitToAllSockets(padName, { scrollPos: data }) });
 	}
 }

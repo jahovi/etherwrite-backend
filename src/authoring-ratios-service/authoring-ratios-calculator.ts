@@ -30,9 +30,9 @@ export default class AuthoringRatiosCalculator {
 		}
 		const blocks = minimapService.getSubjectData();
 		const authors = [...new Set(blocks.map(block => block.author))];
-		const colors = authors.map(author => AuthorRegistry.knownAuthors[author].color);
-		const moodleIDs = authors.map(author => AuthorRegistry.knownAuthors[author].mapper2author)
-		const usernames = authors.map(author => AuthorRegistry.knownAuthors[author].epalias)
+		const colors = authors.map(author => AuthorRegistry.getInstance().knownAuthors[author].color);
+		const moodleIDs = authors.map(author => AuthorRegistry.getInstance().knownAuthors[author].mapper2author)
+		const usernames = authors.map(author => AuthorRegistry.getInstance().knownAuthors[author].epalias)
 
 		// calculate authoring ratios
 		const totalNumChars = blocks
@@ -64,9 +64,9 @@ export default class AuthoringRatiosCalculator {
 	 */
 	public static calculateFromBlocks(blocks: MiniMapDataUnit[]): AuthoringRatios {
 		const authors = [...new Set(blocks.map(block => block.author))];
-		const colors = authors.map(author => AuthorRegistry.knownAuthors[author].color);
-		const moodleIDs = authors.map(author => AuthorRegistry.knownAuthors[author].mapper2author)
-		const usernames = authors.map(author => AuthorRegistry.knownAuthors[author].epalias) // epalias is in fact the moodle username
+		const colors = authors.map(author => AuthorRegistry.getInstance().knownAuthors[author].color);
+		const moodleIDs = authors.map(author => AuthorRegistry.getInstance().knownAuthors[author].mapper2author)
+		const usernames = authors.map(author => AuthorRegistry.getInstance().knownAuthors[author].epalias) // epalias is in fact the moodle username
 
 		// calculate authoring ratios
 		const totalNumChars = blocks

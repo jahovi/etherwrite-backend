@@ -3,7 +3,6 @@ import ChangesetService from "../changeset-service/changeset-service";
 import { MiniMapScrollPos } from "./minimapscrollpos.type";
 import { StructuredTrackingData } from "./structured-tracking-data-type";
 import { TrackingData } from "./trackingdata-type";
-import AuthorRegistry from "../authors/author-registry";
 import CohesionDiagramService from "../../coh-service/coh-service";
 import { DateService } from "../util/date.service";
 import { LoginData, ScrollEvent } from "./coh-interfaces";
@@ -38,8 +37,6 @@ export default class TrackingService extends Subject<MiniMapScrollPos> {
 	private cohesDiagService: CohesionDiagramService;
 	private scrollEvents: ScrollEvent[] = [];
 
-	private static authors = new Set<string>();
-
 	constructor(pad: string) {
 		super();
 		TrackingService.instanceRegistry[pad] = this;
@@ -65,10 +62,6 @@ export default class TrackingService extends Subject<MiniMapScrollPos> {
 			const doc = change.doc as { _id: string, value: TrackingData };
 			if (doc.value && doc.value.pad) {
 				TrackingService.testAndRestoreTimeStamp(doc.value, doc._id);
-				if (doc.value.user && !TrackingService.authors.has(doc.value.user)) {
-					TrackingService.authors.add(doc.value.user);
-					AuthorRegistry.put(doc.value.user);
-				}
 				const instance = TrackingService.instanceRegistry[doc.value.pad];
 				if (instance) {
 					instance.padData.push(doc.value);
@@ -276,16 +269,11 @@ export default class TrackingService extends Subject<MiniMapScrollPos> {
 		});
 		data.rows.forEach(doc => {
 			const content = doc.value as TrackingData;
-			this.authors.add(content.user);
 			TrackingService.testAndRestoreTimeStamp(content, doc.id);
 
 			if (storage[content.pad]) {
 				storage[content.pad].push(content);
 			}
-		});
-
-		TrackingService.authors.forEach(author => {
-			AuthorRegistry.put(author);
 		});
 
 		Object.keys(storage).forEach(padName => {

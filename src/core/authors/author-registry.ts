@@ -1,67 +1,110 @@
-import CouchDbService from "../couch/couch-db.service";
+import DbChange from "../../websocket/dbchange.interface";
 import AuthorData from "../changeset-service/global-author.interface";
+import CouchDbService from "../couch/couch-db.service";
 import LogService from "../log/log.service";
-import logService from "../log/log.service";
-import {Author} from "./author.interface";
+import { Subject } from "../subscriber/subject";
+import { Author } from "./author.interface";
 
-export default class AuthorRegistry {
+export default class AuthorRegistry extends Subject<Record<string, Author>>{
 
-	/**This list contains the authors
-	 * and their traits.
-	 */
-	public static knownAuthors: Record<string, Author> = {};
 
-	/* This helps to protect the 'put' method from overheating*/
-	private static authorTimers: Record<string, number> = {};
-	private static mapperUpdateDelay = 5000;
-	private static mapperTimeStamp = 0;
 
-	private static scope = CouchDbService.getConnection("etherpad");
-
-	/** Call only at startup! */
-	public static async init() {
-		const globalAuthors = await CouchDbService.readView(AuthorRegistry.scope, "evahelpers", "fetchglobalauthors");
-		globalAuthors.rows.forEach(doc => {
-			const authorData = doc.value as { colorId: string, name: string };
-			AuthorRegistry.knownAuthors[doc.key] = {epalias: authorData.name, color: authorData.colorId, mapper2author: ""};
-		})
-		await AuthorRegistry.fetchMapperData();
-		LogService.info(AuthorRegistry.name, "Initialised author registry.");
+	public getSubjectData(): Record<string, Author> {
+		return this.knownAuthors;
 	}
 
-	/**Notify the AuthorRegistry that an author might have been
-	 * recently active. The AuthorRegistry will create an entry
-	 * for this author and/or look for updated data in the database
-	 *
-	 * @param authorId the id of a possibly new author
+	/**This record contains the authors
+	 * and their color and epaliases. epaliases
+	 * can be manually modified by the users in the 
+	 * editor and should only be used for debugging
+	 * purposes. 
 	 */
-	public static put(authorId: string): void {
-		const timestamp = Date.now();
-		if (timestamp < AuthorRegistry.authorTimers[authorId] + AuthorRegistry.mapperUpdateDelay) {
-			// refusing update if the previous update was not too long ago
-			return;
-		}
-		if (!AuthorRegistry.knownAuthors[authorId]) {
-			AuthorRegistry.knownAuthors[authorId] = {epalias: "", color: "", mapper2author: ""};
-			AuthorRegistry.authorTimers[authorId] = timestamp;
-		}
-		AuthorRegistry.authorTimers[authorId] = timestamp;
-		logService.debug(AuthorRegistry.name, "Updating author: " + authorId);
+	public knownAuthors: Record<string, Author> = {};
 
-		// update aliases and color for this author
-		CouchDbService.readView(AuthorRegistry.scope, "evahelpers", "fetchglobalauthors")
-			.then(data => {
-				if (data.rows) {
-					const authorData = data.rows.find(row => row.key === authorId) as AuthorData | undefined;
-					if (authorData) {
-						AuthorRegistry.knownAuthors[authorId].epalias = authorData.value.name;
-						AuthorRegistry.knownAuthors[authorId].color = String(authorData.value.colorId);
+	private static docScope = CouchDbService.getConnection("etherpad");
+
+	private static instance: AuthorRegistry | undefined;
+
+	public static getInstance(): AuthorRegistry {
+		if (!this.instance) {
+			this.instance = new AuthorRegistry();
+		}
+		return this.instance;
+	}
+
+
+	private constructor() {
+		super();
+		this.init();
+	}
+
+	private async init() {
+		CouchDbService.subscribeChanges(AuthorRegistry.docScope, (change: DbChange) => {
+			const doc = change.doc as AuthorData
+			if (doc._id && doc.value) {
+				let newData = false;
+				const authorID = doc._id.substring(13);
+				if (!this.knownAuthors[authorID]) {
+					this.knownAuthors[authorID] = { epalias: doc.value.name, color: doc.value.colorId, mapper2author: "" };
+					newData = true;
+				} else {
+					if (this.knownAuthors[authorID].color !== doc.value.colorId) {
+						this.knownAuthors[authorID].color = doc.value.colorId;
+						newData = true;
 					}
-					if (AuthorRegistry.knownAuthors[authorId].mapper2author == "") {
-						this.fetchMapperData();
+					this.knownAuthors[authorID].epalias = doc.value.name;
+				}
+				if (newData) {
+					this.notifySubscribers();
+				}
+			}
+		},
+		{
+			selector: {
+				_id: {
+					$gt: "globalAuthor:",
+					$lt: "globalAuthor;",
+				},
+			},
+			includeDocs: true,
+		});
+		CouchDbService.subscribeChanges(AuthorRegistry.docScope, (change: DbChange) => {
+			const doc = change.doc as { _id: string, value: string };
+			if (doc._id && (doc.value as unknown) instanceof String) {
+				let newData = false;
+				const authorID = doc.value;
+				if (!this.knownAuthors[authorID]) {
+					this.knownAuthors[authorID] = { epalias: "", color: "", mapper2author: doc._id.substring(14) };
+					newData = true;
+				} else {
+					if (this.knownAuthors[authorID].mapper2author !== doc._id.substring(14)) {
+						this.knownAuthors[authorID].mapper2author = doc._id.substring(14);
+						newData = true;
 					}
 				}
-			});
+				if (newData) {
+					this.notifySubscribers();
+				}
+			}
+		},
+		{
+			selector: {
+				_id: {
+					$gt: "mapper2author:",
+					$lt: "mapper2author;",
+				},
+			},
+			includeDocs: true,
+		});
+
+		const globalAuthors = await CouchDbService.readView(AuthorRegistry.docScope, "evahelpers", "fetchglobalauthors");
+		globalAuthors.rows.forEach(doc => {
+			const authorData = doc.value as { colorId: string, name: string };
+			this.knownAuthors[doc.key] = { epalias: authorData.name, color: authorData.colorId, mapper2author: "" };
+		})
+		await this.fetchMapperData();
+		this.notifySubscribers();
+		LogService.info(AuthorRegistry.name, "Initialised author registry.");
 	}
 
 	/**Scans the database for all available
@@ -73,21 +116,12 @@ export default class AuthorRegistry {
 	 * there wasn´t one before.
 	 *
 	 */
-	private static async fetchMapperData(): Promise<void> {
-		const timestamp = Date.now();
-		if (timestamp < AuthorRegistry.mapperTimeStamp + AuthorRegistry.mapperUpdateDelay) {
-			// refusing update if the previous update was not too long ago
-			return;
-		}
-		AuthorRegistry.mapperTimeStamp = timestamp;
-		const body = await CouchDbService.readView(AuthorRegistry.scope, "evahelpers", "fetchmapper2authordata");
+	private async fetchMapperData(): Promise<void> {
+		const body = await CouchDbService.readView(AuthorRegistry.docScope, "evahelpers", "fetchmapper2authordata");
 		body.rows.forEach(doc => {
-			const author = AuthorRegistry.knownAuthors[doc.key] ? AuthorRegistry.knownAuthors[doc.key] : {epalias: "", color: "", mapper2author: ""};
+			const author = this.knownAuthors[doc.key] ? this.knownAuthors[doc.key] : { epalias: "", color: "", mapper2author: "" };
 			author.mapper2author = String(doc.value);
-
-			if (!author.color) {
-				AuthorRegistry.put(doc.key);
-			}
 		});
 	}
 }
+

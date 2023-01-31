@@ -16,8 +16,8 @@ export interface CohDiagramData {
 
 export interface Node { 
 	id: string, 
-	name: string, 
-	color: string 
+	// name: string, 
+	// color: string 
 }
 
 export interface NodeDistance { 

@@ -3,7 +3,6 @@ import Changeset from "../../changeset/Changeset";
 import CouchDbService from "../couch/couch-db.service";
 import PadInfo from "./padinfo.interface";
 import PadRev from "./pad-rev.interface";
-import AuthorRegistry from "../authors/author-registry";
 import logService from "../log/log.service";
 import {RevData} from "./rev-data.type";
 import {Subject} from "../subscriber/subject";
@@ -110,7 +109,6 @@ export default class ChangesetService extends Subject<Record<number, RevData>> {
 					if (!this.authorKeys.includes(String(i))) {
 						this.authorKeys.push(String(i));
 					}
-					AuthorRegistry.put(entry[1]);
 					if (!this.lastActivityTimeStamp[entry[1]]) {
 						this.lastActivityTimeStamp[entry[1]] = 0;
 					}
