@@ -104,8 +104,8 @@ export default class ChangesetService extends Subject<Record<number, RevData>> {
 		this.padHead = this.padInfo.value.head;
 		for (let i = 0; i < this.padInfo.value.pool.nextNum; i++) {
 			const entry = this.padInfo.value.pool.numToAttrib[String(i)];
-			if (entry[0] == "author") {
-				if (entry[1] != "") {
+			if (entry[0] === "author") {
+				if (entry[1] !== "") {
 					if (!this.authorKeys.includes(String(i))) {
 						this.authorKeys.push(String(i));
 					}

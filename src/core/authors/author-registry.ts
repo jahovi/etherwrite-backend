@@ -25,11 +25,24 @@ export default class AuthorRegistry extends Subject<Record<string, Author>>{
 
 	private static instance: AuthorRegistry | undefined;
 
+	/**
+	 * 
+	 * @returns the singleton instance of this class
+	 */
 	public static getInstance(): AuthorRegistry {
 		if (!this.instance) {
 			this.instance = new AuthorRegistry();
 		}
 		return this.instance;
+	}
+
+	/**
+	 * Useful filtering authors that are not registered in Moodle
+	 * @param epId an Etherpad ID string
+	 * @returns true if there is a mapper2author value for this ID, else returns false
+	 */
+	public isMoodleUser(epId: string) : boolean {
+		return this.knownAuthors[epId] && this.knownAuthors[epId].mapper2author !== "";
 	}
 
 
@@ -38,6 +51,9 @@ export default class AuthorRegistry extends Subject<Record<string, Author>>{
 		this.init();
 	}
 
+	/**
+	 * Creates subscriptions to changes in the CouchDB and fetches all author data that is currently stored in CouchDB. 
+	 */
 	private async init() {
 		CouchDbService.subscribeChanges(AuthorRegistry.docScope, (change: DbChange) => {
 			const doc = change.doc as AuthorData

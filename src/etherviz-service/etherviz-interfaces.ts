@@ -11,7 +11,6 @@ export interface EtherVizColumn {
 
 export interface EtherVizColumnItem {
 	authorId:string,
-	authorColor:string,
 	upperLeft: number,
 	upperRight?:number,
 	lowerLeft:number,

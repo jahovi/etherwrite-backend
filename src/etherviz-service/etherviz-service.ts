@@ -241,11 +241,8 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 			return;
 		}
 		let author = list.head.next?.author as string;
-		let authorRecord = AuthorRegistry.getInstance().knownAuthors[author];
-		let color = authorRecord.color ? authorRecord.color : "#0";
 		let currentBlock: EtherVizColumnItem = {
 			authorId: author,
-			authorColor: color,
 			upperLeft: 0,
 			lowerLeft: -1,
 		};
@@ -256,12 +253,9 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 				statusBlock.push(currentBlock);
 				// Reinitialise
 				author = runner.author;
-				authorRecord = AuthorRegistry.getInstance().knownAuthors[author];
 
-				color = authorRecord.color ? authorRecord.color : "#0";
 				currentBlock = {
 					authorId: author,
-					authorColor: color,
 					upperLeft: index,
 					lowerLeft: index,
 				};
@@ -297,11 +291,8 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 				// Prepare first element of parallelograms list
 				const nodeZero = commonNodes[0] as BasicListNode<EtherVizMeta>;
 				let author = nodeZero.author;
-				let authorRecord = AuthorRegistry.getInstance().knownAuthors[author];
-				let color = authorRecord.color ? authorRecord.color : "#0";
 				let currentBlock: EtherVizColumnItem = {
 					authorId: author,
-					authorColor: color,
 					upperLeft: nodeZero.meta[timeStampIndex - 1],
 					lowerLeft: nodeZero.meta[timeStampIndex - 1],
 					upperRight: nodeZero.meta[timeStampIndex],
@@ -326,11 +317,8 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 						parallelograms.push(currentBlock);
 						// Reinitialise
 						author = node.author;
-						authorRecord = AuthorRegistry.getInstance().knownAuthors[author];
-						color = authorRecord.color ? authorRecord.color : "#0";
 						currentBlock = {
 							authorId: author,
-							authorColor: color,
 							upperLeft: node.meta[timeStampIndex - 1],
 							lowerLeft: node.meta[timeStampIndex - 1],
 							upperRight: node.meta[timeStampIndex],

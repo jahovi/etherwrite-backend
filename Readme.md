@@ -105,7 +105,6 @@ The structure of an EtherVizColumnItem:
 ```js
 {
 	authorId:string,
-	authorColor:string,
 	upperLeft: number,
 	upperRight?:number,
 	lowerLeft:number,
@@ -172,8 +171,6 @@ The auxiliary data structures:
 ```js
 Node { 
 	id: string, 
-	name: string, 
-	color: string 
 }
 
 NodeDistance { 

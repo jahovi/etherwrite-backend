@@ -18,16 +18,18 @@ export default class CohesionDiagramRouter implements Router {
 			res.status(400).send("Query parameter \"padName\" is required.");
 			return;
 		}
-		let cohs = CohesionDiagramService.instances[padName.toString()];
+		let cohs = CohesionDiagramService.instances[padName];
 		if (!cohs) {
-			await PadRegistry.initAndUpdate();
-			cohs = CohesionDiagramService.instances[padName.toString()];
+			try{
+				cohs = await PadRegistry.getServiceInstance(CohesionDiagramService.instances, padName);
+			} catch {
+				res.status(404).send({});
+				return;
+			}
 		}
-		if (!cohs) {
-			res.status(404).send([]);
-			return;
-		}
+
+		const data = cohs.getCohesionData();
 		logService.debug(CohesionDiagramRouter.name, "delivered data for '" + padName + "' to " + _req.ip);
-		res.status(200).send(cohs.getCohesionData());
+		res.status(200).send(data);
 	}
 }

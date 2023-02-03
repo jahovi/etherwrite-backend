@@ -48,7 +48,7 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber<
 	private static readonly stableTimeStampInterval = 60000; // milliseconds
 
 	/**
-	 * This timespan defines, for which period no newer ScollEvent
+	 * This timespan defines, for which period no newer ScrollEvent
 	 * may be evaluated from a single user. 
 	 * 
 	 * It is essential that this timespan is smaller than the stableTimeStampInterval (see above) 
@@ -150,7 +150,7 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber<
 		const perceptionDataWeight = CohesionDiagramService.perceptionDataWeigth;
 		const simultaneityDataWeight = 1 - perceptionDataWeight;
 
-		const authors = this.authors;
+		let authors = this.authors;
 		// Make sure all authors from the Etherpad root document are included
 		this.dataSource.authorKeys.forEach(key => {
 			const author = this.dataSource.attrToAuthorMapping[key];
@@ -158,6 +158,7 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber<
 				authors.push(author);
 			}
 		});
+		authors = authors.filter(author => AuthorRegistry.getInstance().isMoodleUser(author));
 		authors.sort();
 
 		if (authors.length < 2) {
@@ -170,11 +171,8 @@ export default class CohesionDiagramService extends AbstractChangesetSubscriber<
 		// for each author.
 		const nodes: Node[] = [];
 		authors.forEach(author => {
-			// const authorData = AuthorRegistry.getInstance().knownAuthors[author];
 			nodes.push({
 				id: author,
-				// name: authorData.epalias,
-				// color: authorData.color,
 			})
 		});
 
