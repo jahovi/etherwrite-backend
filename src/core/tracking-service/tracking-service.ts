@@ -8,6 +8,7 @@ import { DateService } from "../util/date.service";
 import { LoginData, ScrollEvent } from "./coh-interfaces";
 import { Subject } from "../subscriber/subject";
 import DbChange from "../../websocket/dbchange.interface";
+import AuthorRegistry from "../authors/author-registry";
 
 
 /**
@@ -48,6 +49,13 @@ export default class TrackingService extends Subject<MiniMapScrollPos> {
 	 * Returns the data that subscribers should receive.
 	 */
 	getSubjectData(): MiniMapScrollPos {
+		const authors = Object.keys(this.miniMapScrollPositions);
+		const aReg = AuthorRegistry.getInstance();
+		authors.forEach(author => {
+			if (!aReg.isMoodleUser(author)) {
+				delete this.miniMapScrollPositions[author];
+			}
+		})
 		return this.miniMapScrollPositions;
 	}
 
@@ -163,9 +171,9 @@ export default class TrackingService extends Subject<MiniMapScrollPos> {
 							topIndex: dataEntry.lastTabScrolling.state.top.index,
 							bottomIndex: dataEntry.lastTabScrolling.state.bottom.index,
 						};
-					} 
-				} 
-			} 
+					}
+				}
+			}
 		});
 		this.miniMapScrollPositions = out;
 	}

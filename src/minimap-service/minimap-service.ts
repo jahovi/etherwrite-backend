@@ -3,6 +3,7 @@ import {MiniMapDataUnit} from "./mini-map-data-unit.type";
 import MinimapList from "./minimap-list";
 import Changeset, {Op} from "../changeset/Changeset";
 import AbstractChangesetSubscriber from "../core/changeset-service/abstract-changeset-subscriber";
+import AuthorRegistry from "../core/authors/author-registry";
 
 export default class MinimapService extends AbstractChangesetSubscriber<MiniMapDataUnit[]> {
 	/**
@@ -39,6 +40,12 @@ export default class MinimapService extends AbstractChangesetSubscriber<MiniMapD
 	 * Returns the data that subscribers should receive.
 	 */
 	public getSubjectData(): MiniMapDataUnit[] {
+		const aReg = AuthorRegistry.getInstance();
+		this.minimapBlocklist.forEach(block => {
+			if (!aReg.isMoodleUser(block.author)) {
+				block.ignoreColor = true;
+			}
+		})
 		return this.minimapBlocklist;
 	}
 

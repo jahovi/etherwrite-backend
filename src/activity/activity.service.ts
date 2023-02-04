@@ -6,6 +6,7 @@ import {OperationsAggregatedEntry} from "./operations-aggregated-entry";
 import {ActivitiesAggregatedEntry} from "./activities-aggregated-entry";
 import {AggregatedEntry} from "./abstract-aggregated-entry";
 import {MoodleUser} from "../core/middleware/moodle-user.middleware";
+import AuthorRegistry from "../core/authors/author-registry";
 
 class ActivityService {
 
@@ -97,15 +98,17 @@ class ActivityService {
 		const aggregation: Record<number, TYPE> = {};
 
 		blockList.forEach(entry => {
-			const entryHour = new Date(entry.timestamp.getFullYear(), entry.timestamp.getMonth(), entry.timestamp.getDate(), entry.timestamp.getHours());
-			const key = entryHour.getTime();
-			let aggregatedEntry: TYPE = aggregation[key];
-			if (!aggregatedEntry) {
-				aggregation[key] = new clazz(entryHour);
-				aggregatedEntry = aggregation[key];
-			}
+			if (AuthorRegistry.getInstance().isMoodleUser(entry.author)){
+				const entryHour = new Date(entry.timestamp.getFullYear(), entry.timestamp.getMonth(), entry.timestamp.getDate(), entry.timestamp.getHours());
+				const key = entryHour.getTime();
+				let aggregatedEntry: TYPE = aggregation[key];
+				if (!aggregatedEntry) {
+					aggregation[key] = new clazz(entryHour);
+					aggregatedEntry = aggregation[key];
+				}
 
-			aggregatedEntry.addEntry(entry);
+				aggregatedEntry.addEntry(entry);
+			}
 		});
 
 		return Object.values(aggregation)

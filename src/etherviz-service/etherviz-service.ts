@@ -84,6 +84,14 @@ export default class EtherVizService extends AbstractChangesetSubscriber<EtherVi
 		this.chosenTimestamps.pop();
 		this.startOfDayTimestamps.pop();
 
+		// Remove entries whose authors are unknown to moodle 
+		const aReg = AuthorRegistry.getInstance();
+		outputEtherVizDataSet.forEach(column => {
+			column.rectangles = column.rectangles.filter(item => aReg.isMoodleUser(item.authorId));
+			if("parallelograms" in column){
+				column.parallelograms = column.parallelograms?.filter(item => aReg.isMoodleUser(item.authorId));
+			}
+		})
 		return outputEtherVizDataSet;
 	}
 
