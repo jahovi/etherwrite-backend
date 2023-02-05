@@ -33,7 +33,7 @@ PADS_IGNORE=
 ```
 PADS_IGNORE can be filled with one or more names of pads, separated by commas. These will be ignored by EVA Services that are launched by the pad registry. This can be useful e.g. for debugging or if there are some older pads in the CouchDB and you want to reduce the workload on EVA. 
 
-ALLOW_ORIGIN can be used if you want to disable CORS. For example: ALLOW_ORIGIN=http://localhost:8081
+ALLOW_ORIGIN must be set to the address of your MoodleServer, for example http://localhost:8081
 
 ## Structure
 

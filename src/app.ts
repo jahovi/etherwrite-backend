@@ -16,9 +16,7 @@ dotenv.config();
 
 const app = express();
 
-if (process.env.ALLOW_ORIGIN && (process.env.ALLOW_ORIGIN.includes("localhost") || process.env.ALLOW_ORIGIN.includes("127.0.0.1"))) {
-	app.use(cors());
-}
+app.use(cors());
 
 const port = process.env.PORT || 8083;
 
