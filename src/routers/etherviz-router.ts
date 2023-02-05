@@ -24,6 +24,7 @@ export default class EtherVizRouter implements Router {
 				evService = await PadRegistry.getServiceInstance(EtherVizService.instances, padName);
 			} catch {
 				res.status(404).send([]);
+				return;
 			}
 		}
 
