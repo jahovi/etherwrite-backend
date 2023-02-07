@@ -63,25 +63,42 @@ export default class AuthorRegistry extends Subject<Record<string, Author>>{
 	 * Creates subscriptions to changes in the CouchDB and fetches all author data that is currently stored in CouchDB. 
 	 */
 	private async init() {
-		CouchDbService.subscribeChanges(AuthorRegistry.docScope, (change: DbChange) => {
-			const doc = change.doc as AuthorData
-			if (doc._id && doc.value) {
-				let newData = false;
-				const authorID = doc._id.substring(13);
-				const dbColor = String(doc.value.colorId);
-				const hexColorCode = dbColor.startsWith("#") ? dbColor : this.applyColorFix(Number(dbColor), authorID);
-				if (!this.knownAuthors[authorID]) {
-					this.knownAuthors[authorID] = { epalias: doc.value.name, color: hexColorCode, mapper2author: "" };
-					newData = true;
-				} else {
-					if (this.knownAuthors[authorID].color !== hexColorCode) {
-						this.knownAuthors[authorID].color = hexColorCode;
+		CouchDbService.subscribeChanges(AuthorRegistry.docScope, async (change: DbChange) => {
+			if (change.id.startsWith("globalAuthor:")) {
+				const doc = change.doc as AuthorData
+				if (doc._id && doc.value) {
+					let newData = false;
+					const authorID = doc._id.substring(13);
+					const dbColor = String(doc.value.colorId);
+					const hexColorCode = (/^#([0-9a-f]{1,6})$/i).test(dbColor) ? dbColor : this.applyColorFix(Number(dbColor), authorID);
+					await this.fetchMapperData();
+					if (!this.knownAuthors[authorID]) {
+						this.knownAuthors[authorID] = { epalias: doc.value.name, color: hexColorCode, mapper2author: "" };
 						newData = true;
+					} else {
+						if (this.knownAuthors[authorID].color !== hexColorCode) {
+							this.knownAuthors[authorID].color = hexColorCode;
+							newData = true;
+						}
+						this.knownAuthors[authorID].epalias = doc.value.name;
 					}
-					this.knownAuthors[authorID].epalias = doc.value.name;
+					if (newData) {
+						this.notifySubscribers();
+					}
 				}
-				if (newData) {
-					this.notifySubscribers();
+			}
+			if (change.id.startsWith("mapper2author:")) {
+				const doc = change.doc as { _id: string, value: string };
+				if (doc._id) {
+					const authorID = doc.value;
+					if (!this.knownAuthors[authorID]) {
+						this.knownAuthors[authorID] = { epalias: "", color: "", mapper2author: doc._id.substring(14) };
+					} else {
+						if (this.knownAuthors[authorID].mapper2author !== doc._id.substring(14)) {
+							this.knownAuthors[authorID].mapper2author = doc._id.substring(14);
+							this.notifySubscribers();
+						}
+					}
 				}
 			}
 		},
@@ -89,34 +106,6 @@ export default class AuthorRegistry extends Subject<Record<string, Author>>{
 			selector: {
 				_id: {
 					$gt: "globalAuthor:",
-					$lt: "globalAuthor;",
-				},
-			},
-			includeDocs: true,
-		});
-		CouchDbService.subscribeChanges(AuthorRegistry.docScope, (change: DbChange) => {
-			const doc = change.doc as { _id: string, value: string };
-			if (doc._id && (doc.value as unknown) instanceof String) {
-				let newData = false;
-				const authorID = doc.value;
-				if (!this.knownAuthors[authorID]) {
-					this.knownAuthors[authorID] = { epalias: "", color: "", mapper2author: doc._id.substring(14) };
-					newData = true;
-				} else {
-					if (this.knownAuthors[authorID].mapper2author !== doc._id.substring(14)) {
-						this.knownAuthors[authorID].mapper2author = doc._id.substring(14);
-						newData = true;
-					}
-				}
-				if (newData) {
-					this.notifySubscribers();
-				}
-			}
-		},
-		{
-			selector: {
-				_id: {
-					$gt: "mapper2author:",
 					$lt: "mapper2author;",
 				},
 			},
