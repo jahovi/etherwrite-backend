@@ -10,8 +10,16 @@ export default class AuthorRegistry extends Subject<Record<string, Author>>{
 
 
 
+	/**This method filters the content of the
+	 * knownAuthors object, removing all entries
+	 * that don´t have initialised color and/or mapper2author
+	 * propertied. 
+	 * 
+	 * @returns the filtered author data
+	 */
 	public getSubjectData(): Record<string, Author> {
-		return this.knownAuthors;
+		const filtered = Object.entries(this.knownAuthors).filter(([, value]) => value.color !== "" && value.mapper2author !== "");
+		return Object.fromEntries(filtered);
 	}
 
 	/**This record contains the authors
