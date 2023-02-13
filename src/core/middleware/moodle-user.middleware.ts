@@ -14,7 +14,12 @@ import LogService from "../log/log.service";
  * @param next The next-function of express.
  */
 export const moodleUserMiddleware = (req: Request, res: Response, next: NextFunction) => {
-	jwt.verify(req.query.jwt as string, "0c26bee8-f114-4a59-ad65-15092de45df9", (err, decoded: JwtPayload | string | undefined) => {
+	let secretKey = process.env.MOODLE_SECRET_KEY;
+	if (!secretKey) {
+		const defaultKey = "0c26bee8-f114-4a59-ad65-15092de45df9";
+		secretKey =  defaultKey;
+	}
+	jwt.verify(req.query.jwt as string, secretKey, (err, decoded: JwtPayload | string | undefined) => {
 		if (err || !decoded) {
 			LogService.error("Middleware", "Cannot decode token: " + err?.name);
 			res.status(401).end();

@@ -20,9 +20,8 @@ COUCH_DB_PWD=password
 COUCH_DB_HOST=localhost
 COUCH_DB_PORT=5984
 
-CSP_UPDATE_DELAY=5000
+MOODLE_SECRET_KEY=0c26bee8-f114-4a59-ad65-15092de45df9
 
-TRS_UPDATE_DELAY=2000
 ETHERVIZ_DEBUG=true
 
 COH_FORMAT_EDITING_VALUE=5
@@ -34,6 +33,8 @@ PADS_IGNORE=
 PADS_IGNORE can be filled with one or more names of pads, separated by commas. These will be ignored by EVA Services that are launched by the pad registry. This can be useful e.g. for debugging or if there are some older pads in the CouchDB and you want to reduce the workload on EVA. 
 
 ALLOW_ORIGIN must be set to the address of your MoodleServer, for example http://localhost:8081
+
+MOODLE_SECRET_KEY must be filled with a symmetric secret key. This key also must be entered in the settings of the Etherwrite Moodle plugin. If no secret key is defined here, a default key will be used: 0c26bee8-f114-4a59-ad65-15092de45df9
 
 ## Structure
 
