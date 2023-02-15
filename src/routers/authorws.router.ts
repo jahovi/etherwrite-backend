@@ -1,10 +1,10 @@
 import { Socket } from "socket.io";
-import AbstractWsRoute from "../websocket/wsroute-service/abstract-wsroute";
+import AbstractWsRoute from "../websocket/abstract-wsroute";
 import AuthorRegistry from "../core/authors/author-registry";
 import { Author } from "../core/authors/author.interface";
 
-export default class AuthorWSRouter extends AbstractWsRoute {
-	public readonly ROUTE = "/wsauthors";
+export default class AuthorsRouter extends AbstractWsRoute {
+	public readonly ROUTE = "/authors";
 
 	private socketCounter = 0;
 

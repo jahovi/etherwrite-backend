@@ -9,7 +9,7 @@ import AuthorRegistry from "./core/authors/author-registry";
 import TrackingService from "./core/tracking-service/tracking-service";
 import http from "http";
 import { Server } from "socket.io";
-import wsRouteService from "./websocket/wsroute-service/wsroutes.service";
+import wsRouteService from "./websocket/wsroutes.service";
 import cors from "cors";
 
 dotenv.config();

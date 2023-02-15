@@ -1,7 +1,7 @@
 import nano, {ChangesReaderOptions, DocumentScope, DocumentViewParams, DocumentViewResponse, MaybeDocument, ViewDocument} from "nano";
 import logService from "../log/log.service";
 import {MaybeRevisionedViewDocument} from "./maybe-revisioned-view-document.type";
-import DbChangeCallback from "../../websocket/dbchange-callback.interface";
+import DbChangeCallback from "./dbchange-callback.interface";
 
 /**
  * Service for communication with the Couch DB server.

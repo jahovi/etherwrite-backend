@@ -6,8 +6,8 @@ import PadRev from "./pad-rev.interface";
 import logService from "../log/log.service";
 import {RevData} from "./rev-data.type";
 import {Subject} from "../subscriber/subject";
-import DbChange from "../../websocket/dbchange.interface";
-import DbDocs from "../../websocket/dbdocs";
+import DbChange from "../couch/dbchange.interface";
+import DbDocs from "../couch/dbdocs";
 
 /**
  * A Service that gathers the changesets and other information in

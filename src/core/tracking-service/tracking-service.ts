@@ -7,7 +7,7 @@ import CohesionDiagramService from "../../coh-service/coh-service";
 import { DateService } from "../util/date.service";
 import { LoginData, ScrollEvent } from "./coh-interfaces";
 import { Subject } from "../subscriber/subject";
-import DbChange from "../../websocket/dbchange.interface";
+import DbChange from "../couch/dbchange.interface";
 import AuthorRegistry from "../authors/author-registry";
 
 

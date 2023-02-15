@@ -5,7 +5,7 @@ import ChangesetService from "./core/changeset-service/changeset-service";
 import subscribers from "./core/changeset-service/subscribers";
 import logService from "./core/log/log.service";
 import TrackingService from "./core/tracking-service/tracking-service";
-import DbChange from "./websocket/dbchange.interface";
+import DbChange from "./core/couch/dbchange.interface";
 
 export default class PadRegistry {
 

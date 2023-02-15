@@ -1,5 +1,5 @@
 import {Socket} from "socket.io";
-import logService from "../../core/log/log.service";
+import logService from "../core/log/log.service";
 
 /**
  * Implementations of websocket routes should inherit from this class to automatically have their

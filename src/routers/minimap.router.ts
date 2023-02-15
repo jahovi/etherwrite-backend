@@ -1,7 +1,7 @@
 import TrackingService from "../core/tracking-service/tracking-service";
 import MinimapService from "../minimap-service/minimap-service";
 import { Socket } from "socket.io";
-import AbstractWsRoute from "../websocket/wsroute-service/abstract-wsroute";
+import AbstractWsRoute from "../websocket/abstract-wsroute";
 import PadRegistry from "../pads";
 
 

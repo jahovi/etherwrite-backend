@@ -5,7 +5,7 @@ import { AuthoringRatios } from "../authoring-ratios-service/authoring-ratios.ty
 import logService from "../core/log/log.service";
 import MinimapService from "../minimap-service/minimap-service";
 import PadRegistry from "../pads";
-import AbstractWsRoute from "../websocket/wsroute-service/abstract-wsroute";
+import AbstractWsRoute from "../websocket/abstract-wsroute";
 // import { aggregateRatiosOfOtherUsers } from "./authoring-ratios.router";
 
 export default class AuthoringRatiosWsRoute extends AbstractWsRoute {

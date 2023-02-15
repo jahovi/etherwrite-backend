@@ -1,6 +1,6 @@
 import {DocumentViewResponse} from "nano";
-import couchDbService from "../../core/couch/couch-db.service";
-import LogService from "../../core/log/log.service";
+import couchDbService from "../core/couch/couch-db.service";
+import LogService from "../core/log/log.service";
 
 export default class CharsAndWordsInPadCalculator {
 	private readonly dbConnection;

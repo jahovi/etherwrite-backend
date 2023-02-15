@@ -1,4 +1,4 @@
-import DbChange from "../../websocket/dbchange.interface";
+import DbChange from "../couch/dbchange.interface";
 import AuthorData from "../changeset-service/global-author.interface";
 import CouchDbService from "../couch/couch-db.service";
 import logService from "../log/log.service";

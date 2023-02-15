@@ -1,9 +1,9 @@
 import {Server} from "socket.io";
-import {socketIOmoodleUserMiddleware} from "../ws-moodle-user.middleware";
+import {socketIOmoodleUserMiddleware} from "./ws-moodle-user.middleware";
 import AbstractWsRoute from "./abstract-wsroute";
 import wsRoutes from "./wsroutes";
-import {ConstructorOf} from "../../constructor-of.interface";
-import logService from "../../core/log/log.service";
+import {ConstructorOf} from "../constructor-of.interface";
+import logService from "../core/log/log.service";
 
 /**
  * Automatically registers each websocket route listed in wsroutes.ts and its

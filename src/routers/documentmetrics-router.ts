@@ -1,17 +1,17 @@
 import {DocumentScope} from "nano";
 import {Socket} from "socket.io";
-import couchDbService from "../../core/couch/couch-db.service";
-import DbChangeCallback from "../dbchange-callback.interface";
-import DbChange from "../dbchange.interface";
-import DbDocs from "../dbdocs";
-import AbstractWsRoute from "../wsroute-service/abstract-wsroute";
-import CharsAndWordsInPadCalculator from "./charsinpad-calculator";
+import couchDbService from "../core/couch/couch-db.service";
+import DbChangeCallback from "../core/couch/dbchange-callback.interface";
+import DbChange from "../core/couch/dbchange.interface";
+import DbDocs from "../core/couch/dbdocs";
+import AbstractWsRoute from "../websocket/abstract-wsroute";
+import CharsAndWordsInPadCalculator from "../documentmetrics-service/charsinpad-calculator";
 
 /**
  * Clients connected to this route will receive up to date numbers of chars and words in the pad they relate to.
  */
-export default class WsTestRoute extends AbstractWsRoute {
-	public readonly ROUTE = "/wstest";
+export default class DocumentMetricsRouter extends AbstractWsRoute {
+	public readonly ROUTE = "/documentmetrics";
 
 	private dbChangeCallback!: DbChangeCallback;
 	private dbConnection!: DocumentScope<any>;
