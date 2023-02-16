@@ -1,0 +1,25 @@
+version: "3.8"
+services:
+  eva:
+    build: ./
+    container_name: eva
+    environment:
+      - PORT=${PORT}
+      - COUCH_DB_USER=${COUCHDB_USER}
+      - COUCH_DB_PWD=${COUCHDB_PASSWORD}
+      - COUCH_DB_HOST=couchdb
+      - COUCH_DB_PORT=5984
+      - LOG_LEVEL=INFO
+      - LOG_ERRORS=false
+      - MOODLE_SECRET_KEY=${MOODLE_SECRET_KEY}
+      - ALLOW_ORIGIN=${ALLOW_ORIGIN}
+    ports:
+      - ${PORT}:${PORT}
+    networks:
+      - ext
+      - moodle_ext
+networks:
+  ext:
+    driver: bridge
+  moodle_ext:
+    external: true
