@@ -21,4 +21,4 @@ COPY --chown=node ./dist .
 # Bind to all network interfaces so that it can be mapped to the host OS
 EXPOSE 3000
 HEALTHCHECK --timeout=10s CMD curl --fail http://localhost:8083/api/root/health || exit 1
-CMD [ "node", "src/app.js" ]
+CMD [ "node", "app.js" ]
