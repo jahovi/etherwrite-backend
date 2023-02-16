@@ -19,6 +19,7 @@ Libraries used in this project are licensed under the following terms:
 - nano: Apache License 2.0
 - socket.io: MIT License. Copyright (c) 2014-2018 Automattic <dev@cloudup.com>
 - winston: MIT License. Copyright (c) 2010 Charlie Robbins
+- Changeset Library: Apache License 2.0. Copyright 2013 THE ETHERPAD FOUNDATION
 
 
 License texts:

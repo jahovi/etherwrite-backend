@@ -71,6 +71,11 @@ If you would like to create a new service that you want to base on the evaluatio
 If you are interested in evaluating data from Etherpad´s ep_tracking plugin, you may want to take a look at the TrackingService class. 
 
 
+## Deployment
+
+When deploying EVA in a production instance, it must be launched within your Etherpad environment to share docker networks. Please refer 
+to the `etherpad-serverside` project for an example docker configuration.
+
 ## Endpoints
 
 ### /authoring_ratios
